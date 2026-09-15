@@ -6,7 +6,7 @@
 A modern, modular, and responsive homepage dashboard plugin for Obsidian. Built on a flexible 12-column adaptive grid, it empowers you to customize your workspace with draggable, resizable, and individually configurable widgets. Support multiple pages and third-party plugin integrations.
 
 - **Website:** [peyote.info](https://peyote.info/)
-- **Current release:** [v0.1.0](../../releases/tag/v0.1.0)
+- **Current release:** [v0.1.0](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.1.0)
 - **Minimum Obsidian version:** 1.7.2
 - **Supported platforms:** Desktop and Obsidian Mobile (iOS / Android)
 - **License:** [GNU General Public License v3.0](LICENSE)
@@ -100,7 +100,7 @@ Once available in the official Obsidian Community Plugins directory:
 
 ### Method 2: Manual Installation
 
-1. Download the latest release assets from the [GitHub Releases](../../releases) page:
+1. Download the latest release assets from the [GitHub Releases](https://github.com/jepicaju862-lab/home-pages/releases) page:
    - `main.js`
    - `manifest.json`
    - `styles.css`
@@ -195,7 +195,7 @@ For detailed changelogs and version release histories, see [RELEASE_NOTES.md](RE
 
 ## 🤝 Support & Feedback
 
-- **Bug Reports & Feature Requests — [this repository's issue tracker](../../issues).** Please include your Obsidian version, operating system, and reproduction steps whenever possible.
+- **Bug Reports & Feature Requests — [this repository's issue tracker](https://github.com/jepicaju862-lab/home-pages/issues).** Please include your Obsidian version, operating system, and reproduction steps whenever possible.
 - **Questions & Discussion — QQ group `1094620986`.** The group communicates primarily in Simplified Chinese.
 - **Email — <jepicaju862@gmail.com>.** Use email for private reproduction files or inquiries.
 - **Official Website — [peyote.info](https://peyote.info/).**

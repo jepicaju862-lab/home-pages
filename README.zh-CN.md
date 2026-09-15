@@ -6,7 +6,7 @@
 一款专为 Obsidian 打造的现代化、模块化响应式首页看板插件。基于 12 列自适应网格，支持组件自由增删、拖拽排序、平滑缩放与独立配置；支持多页面管理与第三方插件扩展。
 
 - **官方网站：** [peyote.info](https://peyote.info/)
-- **当前版本：** [v0.1.0](../../releases/tag/v0.1.0)
+- **当前版本：** [v0.1.0](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.1.0)
 - **最低 Obsidian 版本：** 1.7.2
 - **支持平台：** 桌面端与移动端（iOS / Android）
 - **开源协议：** [GNU 通用公共许可证 v3.0](LICENSE)
@@ -100,7 +100,7 @@ api.ui.renderEmpty(containerEl, { message: "暂无数据" });
 
 ### 方式二：手动安装
 
-1. 前往 [GitHub Releases](../../releases) 页面下载最新版本产物：
+1. 前往 [GitHub Releases 页面](https://github.com/jepicaju862-lab/home-pages/releases) 下载最新版本产物：
    - `main.js`
    - `manifest.json`
    - `styles.css`
@@ -211,7 +211,7 @@ scripts/             # 构建校验脚本（verify-bundle.mjs 等）
 
 ## 🤝 支持与反馈
 
-- **Bug 反馈与功能建议——[本仓库的 issue](../../issues)。** 请尽量附上 Obsidian 版本、操作系统以及复现步骤。
+- **Bug 反馈与功能建议——[本仓库的 issue](https://github.com/jepicaju862-lab/home-pages/issues)。** 请尽量附上 Obsidian 版本、操作系统以及复现步骤。
 - **使用问题与交流——QQ 群 `1094620986`。** 群内使用简体中文交流。
 - **邮件——<jepicaju862@gmail.com>。** 不方便公开的复现文件或商务/反馈可以通过邮件发送。
 - **官方网站——[peyote.info](https://peyote.info/)。**
