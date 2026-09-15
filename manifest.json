@@ -5,5 +5,6 @@
   "minAppVersion": "1.7.2",
   "description": "Customizable homepage dashboard with greeting banners, recent notes, quick access, countdowns, pomodoro timer, daily quotes, habits, task kanban, and vault statistics.",
   "author": "and",
+  "authorUrl": "https://peyote.info/",
   "isDesktopOnly": false
 }

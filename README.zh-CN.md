@@ -5,6 +5,7 @@
 
 一款专为 Obsidian 打造的现代化、模块化响应式首页看板插件。基于 12 列自适应网格，支持组件自由增删、拖拽排序、平滑缩放与独立配置；支持多页面管理与第三方插件扩展。
 
+- **官方网站：** [peyote.info](https://peyote.info/)
 - **当前版本：** [v0.1.0](../../releases/tag/v0.1.0)
 - **最低 Obsidian 版本：** 1.7.2
 - **支持平台：** 桌面端与移动端（iOS / Android）
@@ -210,11 +211,22 @@ scripts/             # 构建校验脚本（verify-bundle.mjs 等）
 
 ## 🤝 支持与反馈
 
-- **问题报告与需求建议：** 请通过 [GitHub Issues](../../issues) 提交。
-- **交流沟通：** 欢迎在 GitHub 讨论区交流使用心得与组件扩展想法。
+- **Bug 反馈与功能建议——[本仓库的 issue](../../issues)。** 请尽量附上 Obsidian 版本、操作系统以及复现步骤。
+- **使用问题与交流——QQ 群 `1094620986`。** 群内使用简体中文交流。
+- **邮件——<jepicaju862@gmail.com>。** 不方便公开的复现文件或商务/反馈可以通过邮件发送。
+- **官方网站——[peyote.info](https://peyote.info/)。**
+
+---
+
+## 📬 联系方式
+
+- **QQ 群：** `1094620986`
+- **邮箱：** <jepicaju862@gmail.com>
+- **官网：** [peyote.info](https://peyote.info/)
 
 ---
 
 ## 📄 开源许可证
 
 本项目基于 [GNU General Public License v3.0](LICENSE) 协议开源。
+
