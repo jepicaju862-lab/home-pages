@@ -1,0 +1,36 @@
+{
+  "name": "home-pages",
+  "version": "0.1.0",
+  "description": "A customizable homepage dashboard plugin for Obsidian featuring banners, recent notes, quick access, countdowns, pomodoro, daily quotes, habit tracking, task kanban, and vault statistics.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs --watch",
+    "lint": "eslint src",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && node scripts/verify-bundle.mjs",
+    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "deploy": "node scripts/deploy-local.mjs",
+    "test": "node scripts/test-integrations.mjs"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "homepage",
+    "dashboard",
+    "widgets"
+  ],
+  "author": "and",
+  "license": "GPL-3.0-only",
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^20.11.30",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.20.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.4.2",
+    "obsidian": "1.12.3",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^8.70.0"
+  }
+}

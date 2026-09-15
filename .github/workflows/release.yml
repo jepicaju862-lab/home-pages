@@ -1,0 +1,73 @@
+name: Build, attest, and publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "[0-9]*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and attest release assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag and manifest versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node -e "const manifest=require('./manifest.json'); const tag=process.env.RELEASE_TAG.replace(/^v/, ''); if (manifest.version !== tag) { console.error('Tag version ' + tag + ' does not match manifest version ' + manifest.version); process.exit(1); }"
+
+      - name: Lint plugin source
+        run: npm run lint
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Generate build provenance attestations
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            ${{ github.workspace }}/main.js
+            ${{ github.workspace }}/manifest.json
+            ${{ github.workspace }}/styles.css
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "Home Pages ${RELEASE_TAG}" \
+              --generate-notes
+          fi
+          gh release upload "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            main.js manifest.json styles.css

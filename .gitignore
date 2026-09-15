@@ -1,0 +1,26 @@
+# IDE and editor settings
+.vscode/
+*.iml
+.idea/
+
+# npm dependencies
+node_modules/
+
+# Compiled plugin bundle (uploaded to GitHub Releases)
+main.js
+
+# Sourcemaps
+*.map
+
+# Obsidian local plugin runtime data
+data.json
+
+# macOS and OS system files
+.DS_Store
+Thumbs.db
+
+# Test and release artifacts
+tests/.out/
+.release-work-*
+home-pages*.zip
+
