@@ -10,7 +10,7 @@ import { sanitizeWidget } from "../src/settings";
 import { advanceSession, bumpHistory, formatClock, pauseSession, pomodoroWidget, remainingMs, resetSession, startSession, type PomodoroConfig } from "../src/widgets/pomodoro";
 
 import { cmaIcon, normalizeHost, parseCoords, qweatherIcon, rankCmaCandidates, splitQuery, stripSuffix } from "../src/utils/weather";
-import { htmlToMarkdown, mediaWidget, parseQiushiCatalog, parseQiushiIssueArticles, parseZjxcArticles } from "../src/widgets/media";
+import { htmlToMarkdown, mediaWidget, parseQiushiCatalog, parseQiushiIssueArticles, parseRssArticles, parseZjxcArticles } from "../src/widgets/media";
 
 const normalizePomodoro = (raw: Record<string, unknown>): PomodoroConfig => pomodoroWidget.normalizeConfig!(raw);
 
@@ -396,6 +396,32 @@ function testMedia(): void {
   `;
   const md = htmlToMarkdown(mockHtml);
   check("html to markdown cleans formatting", md.includes("**重点文字**") && md.includes("![](https://example.com/pic.jpg)"));
+
+  // Test WeChat Official Account RSS and HTML
+  const mockWechatRss = `
+    <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+      <channel>
+        <title>人民日报</title>
+        <item>
+          <title><![CDATA[重磅速递：全面深化改革新举措]]></title>
+          <link>https://mp.weixin.qq.com/s/sample_wechat_article_123</link>
+          <pubDate>Mon, 15 Sep 2026 12:00:00 GMT</pubDate>
+          <dc:creator>人民日报评论员</dc:creator>
+          <description><![CDATA[本文是概要文字]]></description>
+          <content:encoded><![CDATA[<div id="js_content" class="rich_media_content"><p>这是微信公众号<strong>正文段落</strong>。</p><p><img data-src="https://mmbiz.qpic.cn/mmbiz_jpg/test123/0?wx_fmt=jpeg"></p></div>]]></content:encoded>
+        </item>
+      </channel>
+    </rss>
+  `;
+  const wechatArticles = parseRssArticles(mockWechatRss, "人民日报");
+  check("wechat rss parsed author, title, and link", wechatArticles.length === 1 && wechatArticles[0].title === "重磅速递：全面深化改革新举措" && wechatArticles[0].author === "人民日报评论员");
+  check("wechat rss extracted fullHtml", Boolean(wechatArticles[0].fullHtml && wechatArticles[0].fullHtml.includes("js_content")));
+
+  // Test htmlToMarkdown with WeChat js_content and data-src
+  if (wechatArticles[0].fullHtml) {
+    const wechatMd = htmlToMarkdown(wechatArticles[0].fullHtml);
+    check("wechat html to markdown parsed bold and data-src image", wechatMd.includes("**正文段落**") && wechatMd.includes("![](https://mmbiz.qpic.cn/mmbiz_jpg/test123/0?wx_fmt=jpeg)"));
+  }
 }
 
 testRegistry();

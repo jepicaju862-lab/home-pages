@@ -50,6 +50,7 @@ export interface MediaItem {
   timestamp: number;
   url: string;
   summary?: string;
+  fullHtml?: string;
 }
 
 export interface MediaData {
@@ -228,26 +229,40 @@ export function parseZjxcArticles(html: string, baseUrl = "https://zjnews.zjol.c
 
 // ---- 通用 RSS / Atom 解析 ---------------------------------------------------
 
-/** 解析通用 RSS 2.0 / Atom 订阅源 */
-export function parseRssArticles(xmlText: string, feedName: string): MediaItem[] {
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(xmlText, "text/xml");
+/** 正则兜底解析 RSS / Atom（在缺少 DOMParser 的测试环境或格式有瑕疵的 XML 下保障鲁棒性） */
+export function parseRssWithRegex(xmlText: string, feedName: string): MediaItem[] {
   const items: MediaItem[] = [];
 
-  // 1. RSS 2.0 (<item>)
-  const rssItems = Array.from(xml.querySelectorAll("item"));
-  if (rssItems.length > 0) {
-    for (const el of rssItems) {
-      let title = el.querySelector("title")?.textContent?.trim() ?? "";
+  // 1. RSS 2.0 items
+  const itemMatches = xmlText.match(/<item[\s>][\s\S]*?<\/item>/gi);
+  if (itemMatches && itemMatches.length > 0) {
+    for (const rawItem of itemMatches) {
+      const titleMatch = rawItem.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      let title = titleMatch ? titleMatch[1].trim() : "";
       title = title.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
       title = title.replace(/<[^>]+>/g, "").trim();
 
-      const link = el.querySelector("link")?.textContent?.trim() ?? "";
-      const pubDate = el.querySelector("pubDate")?.textContent?.trim() ?? "";
-      const author = el.querySelector("author, creator")?.textContent?.trim() ?? "";
-      const desc = el.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").slice(0, 150) ?? "";
+      const linkMatch = rawItem.match(/<link[^>]*>([\s\S]*?)<\/link>/i);
+      let link = linkMatch ? linkMatch[1].trim() : "";
+      link = link.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
 
       if (!title || !link) continue;
+
+      const pubDateMatch = rawItem.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i);
+      const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
+
+      const authorMatch = rawItem.match(/<(?:author|dc:creator|creator)[^>]*>([\s\S]*?)<\/(?:author|dc:creator|creator)>/i);
+      let author = authorMatch ? authorMatch[1].trim() : "";
+      author = author.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
+
+      const descMatch = rawItem.match(/<description[^>]*>([\s\S]*?)<\/description>/i);
+      let desc = descMatch ? descMatch[1].trim() : "";
+      desc = desc.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").replace(/<[^>]+>/g, "").slice(0, 150).trim();
+
+      const encodedMatch = rawItem.match(/<(?:content:encoded|content)[^>]*>([\s\S]*?)<\/(?:content:encoded|content)>/i);
+      let fullHtml = encodedMatch ? encodedMatch[1].trim() : "";
+      fullHtml = fullHtml.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
+
       const timestamp = pubDate ? Date.parse(pubDate) : Date.now();
       const dateStr = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
 
@@ -260,43 +275,157 @@ export function parseRssArticles(xmlText: string, feedName: string): MediaItem[]
         date: dateStr,
         timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
         url: link,
-        summary: desc || undefined
+        summary: desc || undefined,
+        fullHtml: fullHtml || undefined
       });
     }
     return items;
   }
 
-  // 2. Atom (<entry>)
-  const atomEntries = Array.from(xml.querySelectorAll("entry"));
-  for (const el of atomEntries) {
-    let title = el.querySelector("title")?.textContent?.trim() ?? "";
-    title = title.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
-    title = title.replace(/<[^>]+>/g, "").trim();
+  // 2. Atom entries
+  const entryMatches = xmlText.match(/<entry[\s>][\s\S]*?<\/entry>/gi);
+  if (entryMatches && entryMatches.length > 0) {
+    for (const rawEntry of entryMatches) {
+      const titleMatch = rawEntry.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      let title = titleMatch ? titleMatch[1].trim() : "";
+      title = title.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
+      title = title.replace(/<[^>]+>/g, "").trim();
 
-    const linkEl = el.querySelector("link");
-    const link = linkEl?.getAttribute("href") || linkEl?.textContent?.trim() || "";
-    const published = el.querySelector("published, updated")?.textContent?.trim() ?? "";
-    const author = el.querySelector("author name")?.textContent?.trim() ?? "";
-    const summary = el.querySelector("summary, content")?.textContent?.replace(/<[^>]+>/g, "").slice(0, 150) ?? "";
+      const linkMatch = rawEntry.match(/<link[^>]+href=["']([^"']+)["']/i) || rawEntry.match(/<link[^>]*>([\s\S]*?)<\/link>/i);
+      const link = linkMatch ? linkMatch[1].trim() : "";
 
-    if (!title || !link) continue;
-    const timestamp = published ? Date.parse(published) : Date.now();
-    const dateStr = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
+      if (!title || !link) continue;
 
-    items.push({
-      id: `custom:${link}`,
-      sourceKey: "custom",
-      sourceName: feedName,
-      title,
-      author: author || undefined,
-      date: dateStr,
-      timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
-      url: link,
-      summary: summary || undefined
-    });
+      const pubMatch = rawEntry.match(/<(?:published|updated)[^>]*>([\s\S]*?)<\/(?:published|updated)>/i);
+      const published = pubMatch ? pubMatch[1].trim() : "";
+
+      const authorMatch = rawEntry.match(/<name[^>]*>([\s\S]*?)<\/name>/i) || rawEntry.match(/<author[^>]*>([\s\S]*?)<\/author>/i);
+      let author = authorMatch ? authorMatch[1].trim() : "";
+      author = author.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
+
+      const contentMatch = rawEntry.match(/<content[^>]*>([\s\S]*?)<\/content>/i);
+      let fullHtml = contentMatch ? contentMatch[1].trim() : "";
+      fullHtml = fullHtml.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
+
+      const summaryMatch = rawEntry.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i);
+      let summary = summaryMatch ? summaryMatch[1].trim() : "";
+      summary = summary.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").replace(/<[^>]+>/g, "").slice(0, 150).trim();
+      if (!summary && fullHtml) {
+        summary = fullHtml.replace(/<[^>]+>/g, "").slice(0, 150).trim();
+      }
+
+      const timestamp = published ? Date.parse(published) : Date.now();
+      const dateStr = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
+
+      items.push({
+        id: `custom:${link}`,
+        sourceKey: "custom",
+        sourceName: feedName,
+        title,
+        author: author || undefined,
+        date: dateStr,
+        timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+        url: link,
+        summary: summary || undefined,
+        fullHtml: fullHtml || undefined
+      });
+    }
   }
 
   return items;
+}
+
+/** 解析通用 RSS 2.0 / Atom 订阅源 */
+export function parseRssArticles(xmlText: string, feedName: string): MediaItem[] {
+  if (typeof DOMParser !== "undefined") {
+    try {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(xmlText, "text/xml");
+      if (!xml.querySelector("parsererror")) {
+        const items: MediaItem[] = [];
+
+        // 1. RSS 2.0 (<item>)
+        const rssItems = Array.from(xml.querySelectorAll("item"));
+        if (rssItems.length > 0) {
+          for (const el of rssItems) {
+            let title = el.querySelector("title")?.textContent?.trim() ?? "";
+            title = title.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
+            title = title.replace(/<[^>]+>/g, "").trim();
+
+            const link = el.querySelector("link")?.textContent?.trim() ?? "";
+            const pubDate = el.querySelector("pubDate")?.textContent?.trim() ?? "";
+            const author = el.querySelector("author, creator")?.textContent?.trim()
+              || Array.from(el.children).find((c) => c.localName === "creator")?.textContent?.trim()
+              || "";
+            const desc = el.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").slice(0, 150) ?? "";
+
+            // 提取 RSS 中的全文（如 WeWe RSS / Feeddd 的 content:encoded 或 content）
+            const encodedNode = Array.from(el.children).find((c) => c.localName === "encoded" || c.tagName.toLowerCase().endsWith(":encoded") || c.tagName.toLowerCase() === "content");
+            const fullHtml = encodedNode?.textContent?.trim() || "";
+
+            if (!title || !link) continue;
+            const timestamp = pubDate ? Date.parse(pubDate) : Date.now();
+            const dateStr = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
+
+            items.push({
+              id: `custom:${link}`,
+              sourceKey: "custom",
+              sourceName: feedName,
+              title,
+              author: author || undefined,
+              date: dateStr,
+              timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+              url: link,
+              summary: desc || undefined,
+              fullHtml: fullHtml || undefined
+            });
+          }
+          if (items.length > 0) return items;
+        }
+
+        // 2. Atom (<entry>)
+        const atomEntries = Array.from(xml.querySelectorAll("entry"));
+        for (const el of atomEntries) {
+          let title = el.querySelector("title")?.textContent?.trim() ?? "";
+          title = title.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/g, "$1").trim();
+          title = title.replace(/<[^>]+>/g, "").trim();
+
+          const linkEl = el.querySelector("link");
+          const link = linkEl?.getAttribute("href") || linkEl?.textContent?.trim() || "";
+          const published = el.querySelector("published, updated")?.textContent?.trim() ?? "";
+          const author = el.querySelector("author name, author")?.textContent?.trim() ?? "";
+          const contentEl = el.querySelector("content");
+          const fullHtml = contentEl?.textContent?.trim() || "";
+          const summary = el.querySelector("summary")?.textContent?.replace(/<[^>]+>/g, "").slice(0, 150)
+            || fullHtml.replace(/<[^>]+>/g, "").slice(0, 150)
+            || "";
+
+          if (!title || !link) continue;
+          const timestamp = published ? Date.parse(published) : Date.now();
+          const dateStr = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
+
+          items.push({
+            id: `custom:${link}`,
+            sourceKey: "custom",
+            sourceName: feedName,
+            title,
+            author: author || undefined,
+            date: dateStr,
+            timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+            url: link,
+            summary: summary || undefined,
+            fullHtml: fullHtml || undefined
+          });
+        }
+
+        if (items.length > 0) return items;
+      }
+    } catch {
+      // DOMParser failed, fallback to regex
+    }
+  }
+
+  return parseRssWithRegex(xmlText, feedName);
 }
 
 // ---- 数据加载与综合调度 ----------------------------------------------------
@@ -381,6 +510,7 @@ export async function loadMediaData(config: MediaConfig, forceRefresh = false): 
 export function htmlToMarkdown(html: string): string {
   let containerHtml = html;
   const detailMatch = html.match(/<div[^>]+id=["']detailContent["'][^>]*>([\s\S]*?)<\/div>\s*<\/div>/i)
+    || html.match(/<div[^>]+(?:id=["']js_content["']|class=["'][^"']*rich_media_content[^"']*["'])[^>]*>([\s\S]*?)<\/div>/i)
     || html.match(/<div[^>]+class=["'](?:doc-html-content|news_content|content)["'][^>]*>([\s\S]*?)<\/div>/i)
     || html.match(/<div[^>]+id=["']detail["'][^>]*>([\s\S]*?)<\/div>/i);
   if (detailMatch) {
@@ -400,7 +530,8 @@ export function htmlToMarkdown(html: string): string {
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**")
     .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, "**$1**")
-    .replace(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi, "\n\n![]($1)\n\n")
+    // 支持标准 src 与微信公众号 data-src 懒加载图片属性
+    .replace(/<img[^>]+(?:data-src|src)=["']([^"']+)["'][^>]*>/gi, "\n\n![]($1)\n\n")
     .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, "\n> $1\n")
     .replace(/<[^>]+>/g, "");
 
@@ -424,12 +555,23 @@ export async function clipArticleToVault(app: App, item: MediaItem, folderName: 
   const targetPath = normalizePath(`${folder}/${safeTitle}.md`);
 
   let bodyMd = "";
-  try {
-    const rawHtml = await fetchText(item.url);
-    bodyMd = htmlToMarkdown(rawHtml);
-  } catch (err) {
-    console.warn("Home Pages: 获取文章正文失败，使用摘要兜底", err);
-    bodyMd = item.summary || `> （未能自动拉取全文，请点击下方链接阅读原文）\n\n[阅读原文](${item.url})`;
+  // 1. 如果 RSS 源自带了完整的 fullHtml（如 WeWe RSS / Feeddd 的 content:encoded），优先离线转换，避免抓取失败
+  if (item.fullHtml && item.fullHtml.trim().length > 100) {
+    bodyMd = htmlToMarkdown(item.fullHtml);
+  } else {
+    try {
+      const rawHtml = await fetchText(item.url);
+      bodyMd = htmlToMarkdown(rawHtml);
+    } catch (err) {
+      console.warn("Home Pages: 获取文章正文失败，使用摘要兜底", err);
+      bodyMd = item.summary || `> （未能自动拉取全文，请点击下方链接阅读原文）\n\n[阅读原文](${item.url})`;
+    }
+  }
+
+  const isWechat = item.url.includes("mp.weixin.qq.com") || item.sourceName.includes("微信") || item.sourceName.includes("公众号");
+  const tags = ["主流媒体", item.sourceName];
+  if (isWechat && !tags.includes("微信公众号")) {
+    tags.push("微信公众号");
   }
 
   const frontmatter = [
@@ -443,8 +585,7 @@ export async function clipArticleToVault(app: App, item: MediaItem, folderName: 
     item.date ? `published: "${item.date}"` : null,
     `clipped_at: "${todayIso()}"`,
     "tags:",
-    "  - 主流媒体",
-    `  - ${item.sourceName}`,
+    ...tags.map((t) => `  - ${t}`),
     "---",
     "",
     `# ${item.title}`,
@@ -841,7 +982,15 @@ export const mediaWidget: WidgetDefinition<MediaConfig> = {
       onChange: (val) => ctx.update({ clipFolder: val })
     });
 
-    addSectionHeading(container, "自定义 RSS / 订阅源");
+    addSectionHeading(container, "自定义 RSS / 微信公众号订阅源");
+    const tipEl = container.createDiv({
+      cls: "hp-setting-tip",
+      attr: {
+        style: "font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; padding: 8px 12px; background: var(--background-secondary); border-radius: 6px; border-left: 3px solid var(--interactive-accent);"
+      }
+    });
+    tipEl.innerHTML = "💡 <b>支持微信公众号订阅</b>：微信官方无公网 RSS，推荐通过 <b>Feeddd (feeddd.org)</b> 搜索公众号直接复制其 RSS 地址；或通过开源的 <b>WeWe RSS (Docker)</b> 自建订阅服务。将生成的 RSS 地址填入下方，即可在首页看板中实时同步、在线阅读与一键剪藏到本地 Markdown 笔记。";
+
     const feeds = (config.customFeeds || []).map((f) => ({ ...f }));
     const commitFeeds = (): void => ctx.update({ customFeeds: feeds.map((f) => ({ ...f })) });
 
