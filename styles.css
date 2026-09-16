@@ -6,6 +6,7 @@
 .hp-view {
   padding: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--background-secondary);
 }
 
@@ -18,10 +19,13 @@
   --hp-muted: var(--text-muted);
   --hp-border: var(--background-modifier-border);
   --hp-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 20px -10px rgba(15, 23, 42, 0.18);
+  width: 100%;
   max-width: var(--hp-max-width);
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 18px 20px 40px;
   container-type: inline-size;
+  overflow-x: clip;
 }
 
 .theme-dark .hp-root {
@@ -877,19 +881,23 @@
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .hp-pomo-ring {
   position: relative;
   /* 环自己也是尺寸容器：中间的时间字号跟随环的直径。 */
   container-type: size;
-  flex: none;
+  flex: 0 1 auto;
   height: 100%;
-  max-width: 46%;
-  max-height: 240px;
+  max-width: 44%;
+  max-height: 220px;
   aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 .hp-pomo-ring svg {
@@ -1090,30 +1098,39 @@
   fill: currentColor;
 }
 
-/* 窄或接近方形的卡片：改为上下排列，环放中间。 */
-@container (max-width: 360px) or (max-aspect-ratio: 5 / 4) {
+/* 窄卡片或接近方形的卡片：改为上下居中排列，环置中，避免水平溢出 */
+@container (max-width: 460px) or (max-aspect-ratio: 13 / 10) {
   .hp-pomo {
     gap: 6px;
+    padding: 8px 12px 10px;
+    overflow: hidden;
   }
 
   .hp-pomo-main {
-    flex-direction: column;
+    flex-direction: column !important;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .hp-pomo-ring {
-    flex: 1;
+    flex: 1 1 auto;
     width: auto;
     height: auto;
-    min-height: 0;
+    min-height: 70px;
+    max-height: 120px;
     max-width: 100%;
+    aspect-ratio: 1 / 1;
   }
 
   .hp-pomo-side {
     flex: none;
     width: 100%;
     gap: 6px;
+    align-items: center;
+    min-width: 0;
   }
 
   .hp-pomo-task {
@@ -1122,31 +1139,47 @@
 
   .hp-pomo-rounds {
     justify-content: center;
+    gap: 8px;
   }
 
   .hp-pomo-controls {
     justify-content: center;
+    width: 100%;
+    gap: 8px;
+    flex-wrap: nowrap;
   }
 
   .hp-pomo-primary {
-    flex: none;
-    min-width: 110px;
+    flex: 0 1 120px;
+    min-width: 80px;
+    max-width: 140px;
   }
 }
 
-/* 很矮的卡片（≤ 3 行）：去掉阶段切换，环缩小。 */
-@container (max-height: 180px) {
+/* 较矮的卡片（≤ 210px 高度）：自动缩小环并隐藏辅助输入框 */
+@container (max-height: 210px) {
   .hp-pomo {
     gap: 4px;
-    padding: 8px 12px;
+    padding: 6px 10px 8px;
   }
 
-  .hp-pomo-phases {
-    display: none;
+  .hp-pomo-ring {
+    max-height: 95px;
   }
 
   .hp-pomo-task {
     display: none;
+  }
+}
+
+/* 很矮的卡片（≤ 175px 高度）：去掉阶段切换，环缩小 */
+@container (max-height: 175px) {
+  .hp-pomo-phases {
+    display: none;
+  }
+
+  .hp-pomo-ring {
+    max-height: 75px;
   }
 }
 
@@ -3590,15 +3623,52 @@
     grid-column: span 12 !important;
   }
 
-  /* 横幅组件在平板端保持整行并且内边距适度微调 */
+  /* 横幅组件在平板端保持整行并且高度适度自适应，防止问候语/时钟/天气/标签溢出 */
   .hp-card-hero {
     grid-column: 1 / -1 !important;
+    grid-row: span 5 !important;
   }
   .hp-hero {
-    padding: 14px 18px;
+    padding: 12px 18px 14px;
+    gap: 8px;
+    min-height: 0;
+    overflow-y: auto;
   }
   .hp-hero-greeting {
-    font-size: 22px;
+    font-size: 21px;
+    gap: 7px;
+  }
+  .hp-hero-greeting-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .hp-hero-clock {
+    font-size: 28px;
+  }
+  .hp-hero-date {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .hp-hero-weather {
+    margin-top: 4px;
+  }
+  .hp-hero-weather-temp {
+    font-size: 18px;
+  }
+  .hp-hero-weather-meta {
+    font-size: 10.5px;
+  }
+  .hp-hero-chips {
+    gap: 6px;
+  }
+  .hp-hero-chip {
+    padding: 3px 9px;
+    font-size: 11px;
+  }
+  .hp-hero-meta {
+    margin-top: 5px;
+    gap: 10px;
+    font-size: 11.5px;
   }
 }
 
@@ -3610,6 +3680,9 @@
   .hp-card {
     grid-column: 1 / -1 !important;
   }
+  .hp-card-hero {
+    grid-row: span 6 !important;
+  }
   .hp-card-header {
     padding: 9px 12px;
   }
@@ -3618,6 +3691,12 @@
     gap: 8px;
   }
   .hp-hero-clockbox {
+    text-align: left;
+  }
+  .hp-hero-weather-line {
+    justify-content: flex-start;
+  }
+  .hp-hero-weather-meta {
     text-align: left;
   }
 }
