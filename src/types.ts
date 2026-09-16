@@ -14,7 +14,8 @@ export type BuiltinWidgetKind =
   | "duowei"
   | "annotations"
   | "insights"
-  | "wechat";
+  | "wechat"
+  | "media";
 
 export type WidgetKind = BuiltinWidgetKind | (string & {});
 

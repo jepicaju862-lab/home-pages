@@ -304,8 +304,14 @@ export class HomeView extends ItemView {
   }
 
   private applyCardSize(card: HTMLElement, widget: WidgetInstance): void {
-    card.style.gridColumn = `span ${Math.min(MAX_COLUMNS, Math.max(1, widget.w))}`;
-    card.style.gridRow = `span ${Math.min(MAX_ROWS, Math.max(1, widget.h))}`;
+    const w = Math.min(MAX_COLUMNS, Math.max(1, widget.w));
+    const h = Math.min(MAX_ROWS, Math.max(1, widget.h));
+    card.setAttribute("data-w", String(w));
+    card.setAttribute("data-h", String(h));
+    card.style.setProperty("--hp-card-w", String(w));
+    card.style.setProperty("--hp-card-h", String(h));
+    card.style.gridColumn = `span ${w}`;
+    card.style.gridRow = `span ${h}`;
   }
 
   private renderEditBar(card: HTMLElement, widget: WidgetInstance): void {

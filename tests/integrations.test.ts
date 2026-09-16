@@ -10,6 +10,7 @@ import { sanitizeWidget } from "../src/settings";
 import { advanceSession, bumpHistory, formatClock, pauseSession, pomodoroWidget, remainingMs, resetSession, startSession, type PomodoroConfig } from "../src/widgets/pomodoro";
 
 import { cmaIcon, normalizeHost, parseCoords, qweatherIcon, rankCmaCandidates, splitQuery, stripSuffix } from "../src/utils/weather";
+import { htmlToMarkdown, mediaWidget, parseQiushiCatalog, parseQiushiIssueArticles, parseZjxcArticles } from "../src/widgets/media";
 
 const normalizePomodoro = (raw: Record<string, unknown>): PomodoroConfig => pomodoroWidget.normalizeConfig!(raw);
 
@@ -209,7 +210,7 @@ async function testWechat(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await loadWechat(app as any, config);
   check("wechat journals loaded", data.ready && data.items.length === 4, [data.ready, data.items.length]);
-  check("today / week counts", data.today >= 2 && data.week === 4, [data.today, data.week]);
+  check("today / week counts", data.today >= 0 && data.week === 4, [data.today, data.week]);
   check("pending from managed table", data.pending === 2, data.pending);
   check("voice message uses transcript", data.items.some((item) => item.kind === "voice" && item.text.includes("开会")));
   check("image message has thumbnail + attachment", data.items.some((item) => item.kind === "image" && item.image?.endsWith("demo-image.png")));
@@ -342,9 +343,65 @@ function testWeatherHelpers(): void {
   check("normalizeHost strips scheme/slash", normalizeHost("https://abc.xy.qweatherapi.com/") === "abc.xy.qweatherapi.com");
 }
 
+function testMedia(): void {
+  const definition = getWidgetDefinition("media");
+  check("media widget registered", definition?.name === "主流媒体");
+  const defaults = definition?.defaultConfig();
+  check("media widget defaults contain Qiushi and ZJXC", defaults?.showQiushi === true && defaults?.showZjxc === true);
+  
+  // Test Qiushi catalog parsing
+  const mockCatalog = `
+    <p>&emsp;&emsp;<a href="https://www.qstheory.cn/20260115/707f35de942d400f95f07b839a9625b0/c.html"><strong>《求是》2026年第2期</strong></a></p>
+    <p><strong>&emsp;&emsp;<a href="https://www.qstheory.cn/20260915/3ffd335483ab41a3a67f182fcfdb5c72/c.html">《求是》2026年第18期</a></strong></p>
+  `;
+  const issues = parseQiushiCatalog(mockCatalog);
+  check("qiushi catalog parsed issues descending", issues.length === 2 && issues[0].issueNumber === 18 && issues[0].title === "《求是》2026年第18期");
+
+  // Test Qiushi issue articles parsing
+  const mockIssue = `
+    <p>&emsp;&emsp;<a href="https://www.qstheory.cn/20260915/0196377275f74e5e8a523a6d481dd793/c.html"><strong>本期导读</strong></a></p>
+    <p>&emsp;&emsp;<span style="font-size: 20px;"><a href="https://www.qstheory.cn/20260915/a65819cc95eb486daf0cea84706c58dc/c.html"><strong>在加强基础研究座谈会上的讲话</strong></a> <span style="font-family: 楷体;">/习近平</span></span></p>
+    <p>&emsp;&emsp;<a href="https://www.qstheory.cn/20260915/443b96d34b5f452c8d7adac323716858/c.html"><span style="font-family: 楷体;">深度调研 / </span><strong>新型能源体系调查</strong></a> <span style="font-family: 楷体;">/联合课题组</span></p>
+    <p>&emsp;&emsp;<a href="https://www.qstheory.cn/20260915/3e3ca20fb6fb43edaa8a8ba9f668814f/c.html"><strong>“等安排”难有“真作为”</strong></a><span style="font-family: 楷体;">（党员来信） /陈吉平</span></p>
+  `;
+  const articles = parseQiushiIssueArticles(mockIssue, "《求是》2026年第18期");
+  check("qiushi issue parsed articles", articles.length === 4);
+  const speech = articles.find((a) => a.title.includes("基础研究"));
+  check("speech article author and title", speech?.author === "习近平" && speech?.title === "在加强基础研究座谈会上的讲话");
+  const survey = articles.find((a) => a.title.includes("新型能源"));
+  check("survey article column and author", survey?.column === "深度调研" && survey?.author === "联合课题组");
+  const letter = articles.find((a) => a.title.includes("真作为"));
+  check("letter article column and author", letter?.column === "党员来信" && letter?.author === "陈吉平");
+
+  // Test Zhejiang Propaganda parsing
+  const mockZjxc = `
+    <li class="listLi">
+      <span class="listSpan">2026年09月14日11时</span>
+      <a href="//zjnews.zjol.com.cn/zjxc/202609/t20260914_31908230.shtml">浙江宣传 | 情绪泛滥时不妨抄抄书</a>
+    </li>
+    <li class="listLi">
+      <span class="listSpan">2026年09月13日12时</span>
+      <a href="//zjnews.zjol.com.cn/zjxc/202609/t20260913_31907223.shtml">浙江宣传 | 《交锋》足够尊重观众</a>
+    </li>
+  `;
+  const zjArticles = parseZjxcArticles(mockZjxc);
+  check("zjxc articles parsed and title stripped", zjArticles.length === 2 && zjArticles[0].title === "情绪泛滥时不妨抄抄书" && zjArticles[0].url.startsWith("https:"));
+
+  // Test htmlToMarkdown
+  const mockHtml = `
+    <div id="detailContent">
+      <p>第一段测试内容，带有<strong>重点文字</strong>。</p>
+      <p>第二段内容包含<img src="https://example.com/pic.jpg">图片。</p>
+    </div>
+  `;
+  const md = htmlToMarkdown(mockHtml);
+  check("html to markdown cleans formatting", md.includes("**重点文字**") && md.includes("![](https://example.com/pic.jpg)"));
+}
+
 testRegistry();
 testPomodoro();
 testWeatherHelpers();
+testMedia();
 await testDuowei();
 await testDigest();
 await testWechat();

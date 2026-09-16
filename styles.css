@@ -3106,3 +3106,956 @@
     display: none;
   }
 }
+
+/* ---- 主流媒体与权威刊文组件 ----------------------------------------------- */
+
+.hp-media {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.hp-media-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
+
+.hp-media-select-wrap {
+  flex: 1;
+  min-width: 140px;
+  max-width: 220px;
+}
+
+.hp-media-channel-select {
+  width: 100%;
+  height: 28px;
+  padding: 2px 24px 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid var(--hp-border);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-media-channel-select:hover {
+  border-color: color-mix(in srgb, var(--hp-accent, var(--interactive-accent)) 40%, transparent);
+}
+
+.hp-media-search-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.hp-media-search {
+  width: 100%;
+  height: 28px;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--hp-border);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+}
+
+.hp-media-search:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+}
+
+.hp-media-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
+
+.hp-media-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.hp-media-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hp-border);
+  background: var(--background-secondary);
+  color: var(--hp-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.hp-media-pill:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.hp-media-pill.is-active {
+  background: color-mix(in srgb, var(--hp-accent, var(--interactive-accent)) 15%, transparent);
+  border-color: color-mix(in srgb, var(--hp-accent, var(--interactive-accent)) 40%, transparent);
+  color: var(--hp-accent, var(--interactive-accent));
+  font-weight: 600;
+}
+
+.hp-media-pill-count {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.hp-media-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.hp-media-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.hp-media-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 25%, transparent);
+  border-radius: 4px;
+}
+
+.hp-media-list::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-muted) 45%, transparent);
+}
+
+.hp-media-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0 6px;
+  flex-shrink: 0;
+}
+
+.hp-media-load-more {
+  padding: 5px 14px;
+  font-size: 11.5px;
+  color: var(--hp-muted);
+  background: var(--background-secondary);
+  border: 1px solid var(--hp-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hp-media-load-more:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: color-mix(in srgb, var(--hp-accent, var(--interactive-accent)) 40%, transparent);
+}
+
+.hp-media-footer-end {
+  font-size: 11px;
+  color: var(--hp-muted);
+}
+
+.hp-media-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hp-border);
+  background: var(--hp-card-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hp-media-item:hover {
+  background: var(--background-modifier-hover);
+  border-color: color-mix(in srgb, var(--hp-accent, var(--interactive-accent)) 30%, transparent);
+  transform: translateY(-1px);
+}
+
+.hp-media-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hp-media-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hp-media-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.hp-media-badge-qiushi {
+  background: color-mix(in srgb, #dc2626 15%, transparent);
+  color: #dc2626;
+  border: 1px solid color-mix(in srgb, #dc2626 30%, transparent);
+}
+
+.theme-dark .hp-media-badge-qiushi {
+  background: color-mix(in srgb, #ef4444 20%, transparent);
+  color: #f87171;
+  border-color: color-mix(in srgb, #ef4444 40%, transparent);
+}
+
+.hp-media-badge-zjxc {
+  background: color-mix(in srgb, #0284c7 15%, transparent);
+  color: #0284c7;
+  border: 1px solid color-mix(in srgb, #0284c7 30%, transparent);
+}
+
+.theme-dark .hp-media-badge-zjxc {
+  background: color-mix(in srgb, #38bdf8 20%, transparent);
+  color: #38bdf8;
+  border-color: color-mix(in srgb, #38bdf8 40%, transparent);
+}
+
+.hp-media-badge-custom {
+  background: color-mix(in srgb, #8b5cf6 15%, transparent);
+  color: #8b5cf6;
+  border: 1px solid color-mix(in srgb, #8b5cf6 30%, transparent);
+}
+
+.hp-media-column {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.hp-media-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.hp-media-item:hover .hp-media-title {
+  color: var(--hp-accent, var(--interactive-accent));
+}
+
+.hp-media-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--hp-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-media-author {
+  font-family: var(--font-text-override, var(--font-interface));
+  color: color-mix(in srgb, var(--text-normal) 75%, transparent);
+}
+
+.hp-media-issue {
+  color: var(--hp-muted);
+}
+
+.hp-media-time {
+  color: var(--hp-muted);
+}
+
+.hp-media-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hp-media-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--hp-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.hp-media-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.hp-media-clip-btn.is-clipped {
+  color: var(--color-green, #16a34a);
+}
+
+.hp-media-clip-btn.is-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   响应式网格与平板端 / 触控端适配 (Tablet & Touch Optimizations)
+   ========================================================================== */
+
+/* 1. 平板与移动端基准设置（针对 iPadOS / Android 平板 / Surface 触控设备） */
+.is-tablet .hp-root,
+.is-mobile .hp-root {
+  padding: 14px 16px 36px;
+  --hp-gap: 14px;
+}
+
+/* 平板端水平平滑滚动标签栏，防止页面过多时换行拥挤 */
+.is-tablet .hp-tabs,
+.is-mobile .hp-tabs,
+.is-touch-device .hp-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.is-tablet .hp-tabs::-webkit-scrollbar,
+.is-mobile .hp-tabs::-webkit-scrollbar,
+.is-touch-device .hp-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.is-tablet .hp-tab,
+.is-mobile .hp-tab,
+.is-touch-device .hp-tab {
+  padding: 6px 15px;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 32px;
+}
+
+.is-tablet .hp-tab:active,
+.is-mobile .hp-tab:active,
+.is-touch-device .hp-tab:active {
+  transform: scale(0.96);
+}
+
+/* 2. 平板端触控按钮尺寸与常显（消除无鼠标 hover 导致的难以发现与误触） */
+.is-tablet .hp-card-gear,
+.is-tablet .hp-card-action,
+.is-mobile .hp-card-gear,
+.is-mobile .hp-card-action,
+.is-touch-device .hp-card-gear,
+.is-touch-device .hp-card-action {
+  width: 32px;
+  height: 32px;
+  opacity: 0.85;
+  border-radius: 8px;
+}
+
+.is-tablet .hp-card-gear svg,
+.is-tablet .hp-card-action svg,
+.is-mobile .hp-card-gear svg,
+.is-mobile .hp-card-action svg,
+.is-touch-device .hp-card-gear svg,
+.is-touch-device .hp-card-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.is-tablet .hp-card-gear:active,
+.is-tablet .hp-card-action:active,
+.is-mobile .hp-card-gear:active,
+.is-mobile .hp-card-action:active,
+.is-touch-device .hp-card-gear:active,
+.is-touch-device .hp-card-action:active {
+  opacity: 1;
+  background: var(--background-modifier-active-hover);
+  transform: scale(0.94);
+}
+
+/* 3. 平板端可视化编辑条适配（增大点按区域，便于手指精准控制） */
+.is-tablet .hp-card-editbar,
+.is-mobile .hp-card-editbar,
+.is-touch-device .hp-card-editbar {
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.is-tablet .hp-editbtn-group,
+.is-mobile .hp-editbtn-group,
+.is-touch-device .hp-editbtn-group {
+  padding: 3px;
+  gap: 3px;
+}
+
+.is-tablet .hp-editbtn,
+.is-mobile .hp-editbtn,
+.is-touch-device .hp-editbtn {
+  width: 34px;
+  height: 32px;
+  border-radius: 7px;
+}
+
+.is-tablet .hp-editbtn svg,
+.is-mobile .hp-editbtn svg,
+.is-touch-device .hp-editbtn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.is-tablet .hp-editbtn:active,
+.is-mobile .hp-editbtn:active,
+.is-touch-device .hp-editbtn:active {
+  background: var(--background-modifier-active-hover);
+  transform: scale(0.92);
+}
+
+.is-tablet .hp-editbtn-value,
+.is-mobile .hp-editbtn-value,
+.is-touch-device .hp-editbtn-value {
+  min-width: 20px;
+  font-size: 12px;
+}
+
+/* 4. 容器查询网格自适应（平板端 2 栏与手机端 1 栏流式回流） */
+/* 平板宽度区间（621px ~ 960px）：如 iPad 竖屏、iPad 横屏带侧边栏、分屏视图 */
+@container (max-width: 960px) {
+  .hp-root {
+    --hp-gap: 14px;
+  }
+
+  /* 小于或等于 6 列的卡片在平板端自动撑满半宽（形成规范均分的双列网格） */
+  .hp-card[data-w="1"],
+  .hp-card[data-w="2"],
+  .hp-card[data-w="3"],
+  .hp-card[data-w="4"],
+  .hp-card[data-w="5"],
+  .hp-card[data-w="6"] {
+    grid-column: span 6 !important;
+  }
+
+  /* 大于 6 列的宽卡片在平板端铺满整行 */
+  .hp-card[data-w="7"],
+  .hp-card[data-w="8"],
+  .hp-card[data-w="9"],
+  .hp-card[data-w="10"],
+  .hp-card[data-w="11"],
+  .hp-card[data-w="12"] {
+    grid-column: span 12 !important;
+  }
+
+  /* 横幅组件在平板端保持整行并且内边距适度微调 */
+  .hp-card-hero {
+    grid-column: 1 / -1 !important;
+  }
+  .hp-hero {
+    padding: 14px 18px;
+  }
+  .hp-hero-greeting {
+    font-size: 22px;
+  }
+}
+
+/* 窄屏 / 手机 / iPad 窄分屏（≤ 620px）：全单列回流 */
+@container (max-width: 620px) {
+  .hp-grid {
+    gap: 12px;
+  }
+  .hp-card {
+    grid-column: 1 / -1 !important;
+  }
+  .hp-card-header {
+    padding: 9px 12px;
+  }
+  .hp-hero-top {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .hp-hero-clockbox {
+    text-align: left;
+  }
+}
+
+/* 5. 主流媒体组件（Media Widget）平板端深度适配 */
+.is-tablet .hp-media-toolbar,
+.is-mobile .hp-media-toolbar,
+.is-touch-device .hp-media-toolbar {
+  gap: 8px;
+}
+
+.is-tablet .hp-media-channel-select,
+.is-tablet .hp-media-search,
+.is-mobile .hp-media-channel-select,
+.is-mobile .hp-media-search,
+.is-touch-device .hp-media-channel-select,
+.is-touch-device .hp-media-search {
+  height: 34px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+
+.is-tablet .hp-media-channel-select,
+.is-mobile .hp-media-channel-select,
+.is-touch-device .hp-media-channel-select {
+  padding: 4px 26px 4px 10px;
+}
+
+.is-tablet .hp-media-item,
+.is-mobile .hp-media-item,
+.is-touch-device .hp-media-item {
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.is-tablet .hp-media-item:active,
+.is-mobile .hp-media-item:active,
+.is-touch-device .hp-media-item:active {
+  transform: scale(0.985);
+  background: var(--background-modifier-hover);
+}
+
+.is-tablet .hp-media-title,
+.is-mobile .hp-media-title,
+.is-touch-device .hp-media-title {
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.is-tablet .hp-media-badge,
+.is-mobile .hp-media-badge,
+.is-touch-device .hp-media-badge {
+  padding: 2px 7px;
+  font-size: 11.5px;
+}
+
+.is-tablet .hp-media-btn,
+.is-mobile .hp-media-btn,
+.is-touch-device .hp-media-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.is-tablet .hp-media-btn svg,
+.is-mobile .hp-media-btn svg,
+.is-touch-device .hp-media-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 平板触控下剪藏按钮常显，不依赖 hover */
+.is-tablet .hp-media-clip-btn,
+.is-mobile .hp-media-clip-btn,
+.is-touch-device .hp-media-clip-btn {
+  opacity: 0.85;
+}
+
+.is-tablet .hp-media-btn:active,
+.is-mobile .hp-media-btn:active,
+.is-touch-device .hp-media-btn:active {
+  transform: scale(0.92);
+  background: var(--background-modifier-active-hover);
+}
+
+.is-tablet .hp-media-load-more,
+.is-mobile .hp-media-load-more,
+.is-touch-device .hp-media-load-more {
+  min-height: 36px;
+  padding: 7px 22px;
+  font-size: 12px;
+}
+
+.is-tablet .hp-media-load-more:active,
+.is-mobile .hp-media-load-more:active,
+.is-touch-device .hp-media-load-more:active {
+  transform: scale(0.96);
+}
+
+/* 窄卡片下的媒体工具栏自适应换行，避免搜索框被挤压 */
+@container (max-width: 380px) {
+  .hp-media-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .hp-media-select-wrap {
+    min-width: 100%;
+    max-width: 100%;
+  }
+  .hp-media-search-wrap {
+    width: 100%;
+  }
+}
+
+/* 6. 通用列表（最近笔记、那年今日等）平板端触控高亮与行高 */
+.is-tablet .hp-list-row,
+.is-mobile .hp-list-row,
+.is-touch-device .hp-list-row {
+  padding: 10px 10px;
+  min-height: 44px;
+}
+
+.is-tablet .hp-list-row:active,
+.is-mobile .hp-list-row:active,
+.is-touch-device .hp-list-row:active {
+  background: var(--background-modifier-hover);
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   组件级别平板端与触控深度适配 (Component-Level Tablet & Touch Adaptations)
+   ========================================================================== */
+
+/* ---- A. 任务看板（Task Kanban）组件适配 ----------------------------------- */
+/* 窄卡片下（<= 480px，如平板双列布局的半宽卡片），3 列自动切换为横向平滑触控滑动 */
+@container (max-width: 480px) {
+  .hp-kanban {
+    display: flex !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    gap: 10px;
+    padding-bottom: 8px;
+  }
+
+  .hp-kanban-column {
+    min-width: 230px;
+    flex: 0 0 80%;
+    scroll-snap-align: start;
+  }
+}
+
+.is-tablet .hp-kanban-card,
+.is-mobile .hp-kanban-card,
+.is-touch-device .hp-kanban-card {
+  padding: 10px 10px;
+  gap: 10px;
+}
+
+.is-tablet .hp-kanban-title,
+.is-mobile .hp-kanban-title,
+.is-touch-device .hp-kanban-title {
+  font-size: 13px;
+}
+
+.is-tablet .hp-kanban-check,
+.is-mobile .hp-kanban-check,
+.is-touch-device .hp-kanban-check {
+  width: 28px;
+  height: 28px;
+}
+
+.is-tablet .hp-kanban-check svg,
+.is-mobile .hp-kanban-check svg,
+.is-touch-device .hp-kanban-check svg {
+  width: 17px;
+  height: 17px;
+}
+
+.is-tablet .hp-kanban-open,
+.is-mobile .hp-kanban-open,
+.is-touch-device .hp-kanban-open {
+  width: 28px;
+  height: 28px;
+  opacity: 0.75;
+}
+
+.is-tablet .hp-kanban-open svg,
+.is-mobile .hp-kanban-open svg,
+.is-touch-device .hp-kanban-open svg {
+  width: 15px;
+  height: 15px;
+}
+
+.is-tablet .hp-kanban-add-btn,
+.is-mobile .hp-kanban-add-btn,
+.is-touch-device .hp-kanban-add-btn {
+  min-height: 32px;
+  padding: 7px 8px;
+  font-size: 12.5px;
+}
+
+/* ---- B. 快捷入口（Quicklinks）组件适配 ------------------------------------- */
+/* 窄卡片自适应列数，防止 3~4 列挤压变形 */
+@container (max-width: 360px) {
+  .hp-quicklinks {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px;
+    padding: 8px;
+  }
+}
+
+@container (max-width: 240px) {
+  .hp-quicklinks {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.is-tablet .hp-quicklink,
+.is-mobile .hp-quicklink,
+.is-touch-device .hp-quicklink {
+  padding: 12px 14px;
+  min-height: 48px;
+}
+
+.is-tablet .hp-quicklink:active,
+.is-mobile .hp-quicklink:active,
+.is-touch-device .hp-quicklink:active {
+  transform: scale(0.97);
+  background: color-mix(in srgb, var(--hp-tone) 18%, transparent);
+}
+
+.is-tablet .hp-quicklink-label,
+.is-mobile .hp-quicklink-label,
+.is-touch-device .hp-quicklink-label {
+  font-size: 13.5px;
+}
+
+/* ---- C. 习惯打卡（Habit Tracker）组件适配 ----------------------------------- */
+.is-tablet .hp-habit-chip,
+.is-mobile .hp-habit-chip,
+.is-touch-device .hp-habit-chip {
+  padding: 6px 14px;
+  font-size: 13px;
+  min-height: 34px;
+}
+
+.is-tablet .hp-habit-toolbar .hp-pill,
+.is-mobile .hp-habit-toolbar .hp-pill,
+.is-touch-device .hp-habit-toolbar .hp-pill {
+  padding: 4px 13px;
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.is-tablet .hp-habit-cell:active,
+.is-mobile .hp-habit-cell:active,
+.is-touch-device .hp-habit-cell:active {
+  transform: scale(1.35);
+}
+
+/* ---- D. 番茄时钟（Pomodoro）组件适配 --------------------------------------- */
+.is-tablet .hp-pomo .hp-pill,
+.is-mobile .hp-pomo .hp-pill,
+.is-touch-device .hp-pomo .hp-pill {
+  padding: 5px 13px;
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.is-tablet .hp-pomo-btn,
+.is-mobile .hp-pomo-btn,
+.is-touch-device .hp-pomo-btn {
+  width: 36px;
+  height: 36px;
+}
+
+.is-tablet .hp-pomo-primary,
+.is-mobile .hp-pomo-primary,
+.is-touch-device .hp-pomo-primary {
+  height: 38px;
+  font-size: 14px;
+  padding: 0 16px;
+}
+
+/* ---- E. 每日名言（Daily Quote）组件适配 ------------------------------------- */
+.is-tablet .hp-quote-shuffle,
+.is-mobile .hp-quote-shuffle,
+.is-touch-device .hp-quote-shuffle {
+  opacity: 0.75;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.is-tablet .hp-quote-shuffle svg,
+.is-mobile .hp-quote-shuffle svg,
+.is-touch-device .hp-quote-shuffle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.is-tablet .hp-quote-shuffle:active,
+.is-mobile .hp-quote-shuffle:active,
+.is-touch-device .hp-quote-shuffle:active {
+  background: var(--background-modifier-active-hover);
+  transform: scale(0.92);
+}
+
+/* ---- F. 库统计（Vault Statistics）组件适配 --------------------------------- */
+@container (max-width: 380px) {
+  .hp-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+.is-tablet .hp-stat,
+.is-mobile .hp-stat,
+.is-touch-device .hp-stat {
+  padding: 12px 14px;
+}
+
+.is-tablet .hp-stat-value,
+.is-mobile .hp-stat-value,
+.is-touch-device .hp-stat-value {
+  font-size: 24px;
+}
+
+/* ---- G. 微信收件箱与多维表格摘要适配 --------------------------------------- */
+.is-tablet .hp-wechat-item,
+.is-mobile .hp-wechat-item,
+.is-touch-device .hp-wechat-item {
+  padding: 10px 10px;
+  gap: 12px;
+}
+
+.is-tablet .hp-wechat-done,
+.is-mobile .hp-wechat-done,
+.is-touch-device .hp-wechat-done {
+  opacity: 0.85;
+  width: 28px;
+  height: 28px;
+}
+
+.is-tablet .hp-wechat-toolbar .hp-pill,
+.is-mobile .hp-wechat-toolbar .hp-pill,
+.is-touch-device .hp-wechat-toolbar .hp-pill {
+  padding: 4px 12px;
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.is-tablet .hp-digest-row,
+.is-mobile .hp-digest-row,
+.is-touch-device .hp-digest-row {
+  padding: 8px 10px 8px 12px;
+  min-height: 40px;
+}
+
+.is-tablet .hp-digest-pill,
+.is-mobile .hp-digest-pill,
+.is-touch-device .hp-digest-pill {
+  padding: 4px 11px;
+  font-size: 12px;
+}
+
+/* ---- H. 墨水批注（Mobile Ink Annotation）组件适配 -------------------------- */
+.is-tablet .hp-annot-tab,
+.is-mobile .hp-annot-tab,
+.is-touch-device .hp-annot-tab {
+  padding: 7px 14px;
+  font-size: 13px;
+  min-height: 34px;
+}
+
+.is-tablet .hp-annot-tab:active,
+.is-mobile .hp-annot-tab:active,
+.is-touch-device .hp-annot-tab:active {
+  transform: scale(0.97);
+}
+
+/* ---- I. 通用粗指针触控设备媒体查询补丁 (针对通用触控设备 / 模拟器) ----------- */
+@media (pointer: coarse) {
+  .hp-card-gear,
+  .hp-card-action {
+    width: 32px;
+    height: 32px;
+    opacity: 0.85;
+  }
+  .hp-card-gear svg,
+  .hp-card-action svg {
+    width: 16px;
+    height: 16px;
+  }
+  .hp-media-channel-select,
+  .hp-media-search {
+    height: 34px;
+    font-size: 12.5px;
+  }
+  .hp-media-btn {
+    width: 34px;
+    height: 34px;
+  }
+  .hp-media-clip-btn {
+    opacity: 0.85;
+  }
+  .hp-editbtn {
+    width: 34px;
+    height: 32px;
+  }
+  .hp-quote-shuffle {
+    opacity: 0.75;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* ---- J. iOS / iPadOS 惯性滚动与防误选 --------------------------------------- */
+.hp-view,
+.hp-media-list,
+.hp-list,
+.hp-habit,
+.hp-tabs,
+.hp-kanban-list,
+.hp-kanban {
+  -webkit-overflow-scrolling: touch;
+}
+
+.hp-card-header,
+.hp-tab,
+.hp-media-badge,
+.hp-media-actions,
+.hp-editbtn-group,
+.hp-habit-toolbar,
+.hp-annot-switch {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+
+
