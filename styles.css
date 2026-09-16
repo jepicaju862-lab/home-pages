@@ -1098,18 +1098,18 @@
   fill: currentColor;
 }
 
-/* 窄卡片或接近方形的卡片：改为上下居中排列，环置中，避免水平溢出 */
-@container (max-width: 460px) or (max-aspect-ratio: 13 / 10) {
+/* 仅在极窄卡片（宽度 ≤ 290px）时才切换为上下居中单列布局，保证桌面端与平板端按钮绝不被底部遮挡 */
+@container (max-width: 290px) {
   .hp-pomo {
-    gap: 6px;
-    padding: 8px 12px 10px;
+    gap: 4px;
+    padding: 6px 10px 8px;
     overflow: hidden;
   }
 
   .hp-pomo-main {
     flex-direction: column !important;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     min-height: 0;
     min-width: 0;
     overflow: hidden;
@@ -1119,67 +1119,73 @@
     flex: 1 1 auto;
     width: auto;
     height: auto;
-    min-height: 70px;
-    max-height: 120px;
-    max-width: 100%;
+    min-height: 60px;
+    max-height: 85px;
+    max-width: 85px;
     aspect-ratio: 1 / 1;
   }
 
   .hp-pomo-side {
     flex: none;
     width: 100%;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
     min-width: 0;
   }
 
   .hp-pomo-task {
-    display: none;
+    display: none !important;
   }
 
   .hp-pomo-rounds {
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   .hp-pomo-controls {
     justify-content: center;
     width: 100%;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: nowrap;
   }
 
   .hp-pomo-primary {
-    flex: 0 1 120px;
-    min-width: 80px;
-    max-width: 140px;
+    flex: 0 1 110px;
+    min-width: 75px;
+    max-width: 120px;
+    height: 32px;
+    font-size: 12px;
   }
 }
 
-/* 较矮的卡片（≤ 210px 高度）：自动缩小环并隐藏辅助输入框 */
+/* 矮卡片（≤ 210px 高度）：隐藏任务输入框，为环与操作按键释放充足垂直空间，绝不发生底部截断 */
 @container (max-height: 210px) {
   .hp-pomo {
     gap: 4px;
-    padding: 6px 10px 8px;
-  }
-
-  .hp-pomo-ring {
-    max-height: 95px;
+    padding: 6px 12px 8px;
   }
 
   .hp-pomo-task {
-    display: none;
+    display: none !important;
+  }
+
+  .hp-pomo-side {
+    gap: 6px;
+  }
+
+  .hp-pomo-primary {
+    height: 32px;
   }
 }
 
-/* 很矮的卡片（≤ 175px 高度）：去掉阶段切换，环缩小 */
-@container (max-height: 175px) {
+/* 很矮的卡片（≤ 165px 高度）：隐藏顶部阶段切换胶囊，按需收敛环尺寸 */
+@container (max-height: 165px) {
   .hp-pomo-phases {
-    display: none;
+    display: none !important;
   }
 
   .hp-pomo-ring {
-    max-height: 75px;
+    max-height: 90px;
   }
 }
 
