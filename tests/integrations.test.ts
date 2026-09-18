@@ -10,7 +10,19 @@ import { sanitizeWidget } from "../src/settings";
 import { advanceSession, bumpHistory, formatClock, pauseSession, pomodoroWidget, remainingMs, resetSession, startSession, type PomodoroConfig } from "../src/widgets/pomodoro";
 
 import { cmaIcon, normalizeHost, parseCoords, qweatherIcon, rankCmaCandidates, splitQuery, stripSuffix } from "../src/utils/weather";
-import { htmlToMarkdown, mediaWidget, parseQiushiCatalog, parseQiushiIssueArticles, parseRssArticles, parseZjxcArticles } from "../src/widgets/media";
+import { parseOpml, exportOpml } from "../src/utils/opml";
+import {
+  getCachedMediaData,
+  htmlToMarkdown,
+  loadDiskCache,
+  mediaWidget,
+  parseQiushiCatalog,
+  parseQiushiIssueArticles,
+  parseRssArticles,
+  parseZjxcArticles,
+  saveDiskCacheNow,
+  syncMediaData
+} from "../src/widgets/media";
 
 const normalizePomodoro = (raw: Record<string, unknown>): PomodoroConfig => pomodoroWidget.normalizeConfig!(raw);
 
@@ -424,10 +436,155 @@ function testMedia(): void {
   }
 }
 
+async function testOpmlAndFollow(): Promise<void> {
+  const followOpmlPath = "C:/Users/加加/Desktop/follow.opml";
+  let opmlContent = "";
+  try {
+    opmlContent = await fs.readFile(followOpmlPath, "utf8");
+  } catch (err) {
+    console.warn("Could not read follow.opml:", err);
+  }
+
+  if (opmlContent) {
+    const feeds = parseOpml(opmlContent);
+    check("follow.opml parsed exactly 60 feeds", feeds.length === 60, feeds.length);
+
+    // Verify categories
+    const categories = new Set(feeds.map((f) => f.category));
+    check("follow.opml contains expected categories",
+      categories.has("科技") &&
+      categories.has("时政") &&
+      categories.has("财经") &&
+      categories.has("新闻") &&
+      categories.has("视频 / 时政") &&
+      categories.has("播客音频") &&
+      categories.has("精选文章"),
+      Array.from(categories)
+    );
+
+    // Verify specific feeds
+    const sspai = feeds.find((f) => f.name === "少数派");
+    check("sspai parsed with url and category", Boolean(sspai && sspai.url.includes("sspai") && sspai.category === "科技"));
+
+    const halfLatte = feeds.find((f) => f.name.includes("半拿铁"));
+    check("halfLatte podcast parsed with category", Boolean(halfLatte && halfLatte.category === "播客音频"));
+
+    const bilibili = feeds.find((f) => f.name.includes("技术爬爬虾"));
+    check("bilibili video feed parsed", Boolean(bilibili && bilibili.category === "视频 / 技术"));
+
+    // Test round-trip exportOpml -> parseOpml
+    const exportedXml = exportOpml(feeds, "Follow 订阅导出");
+    check("exported OPML contains opml tags and categories", exportedXml.includes('<opml version="2.0">') && exportedXml.includes('text="科技"'));
+    const reimported = parseOpml(exportedXml);
+    check("round-trip OPML preserves all 60 feeds", reimported.length === 60, reimported.length);
+  }
+
+  // Test mediaType detection (audio / video) in parseRssArticles
+  const mockAudioRss = `
+    <rss version="2.0">
+      <channel>
+        <title>忽左忽右</title>
+        <item>
+          <title>测试播客单集</title>
+          <link>https://example.com/ep1</link>
+          <enclosure url="https://example.com/audio.mp3" length="12345" type="audio/mpeg" />
+        </item>
+      </channel>
+    </rss>
+  `;
+  const audioItems = parseRssArticles(mockAudioRss, "忽左忽右", { category: "播客音频" });
+  check("rss parser detected audio podcast", audioItems.length === 1 && audioItems[0].mediaType === "audio" && audioItems[0].category === "播客音频");
+
+  const mockVideoRss = `
+    <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+      <channel>
+        <title>Bilibili</title>
+        <item>
+          <title>测试视频</title>
+          <link>https://www.bilibili.com/video/BV123456</link>
+          <media:thumbnail url="https://i0.hdslb.com/cover.jpg" />
+        </item>
+      </channel>
+    </rss>
+  `;
+  const videoItems = parseRssArticles(mockVideoRss, "技术UP主", { category: "视频 / 技术" });
+  check("rss parser detected video and thumbnail", videoItems.length === 1 && videoItems[0].mediaType === "video" && videoItems[0].thumbnail === "https://i0.hdslb.com/cover.jpg");
+
+  // Test mediaWidget normalizeConfig with CustomFeed
+  const normalized = mediaWidget.normalizeConfig!({
+    customFeeds: [
+      { name: "测试源", url: "https://example.com/rss", category: "科技", enabled: true }
+    ]
+  });
+  check("normalizeConfig preserves category and enabled",
+    normalized.customFeeds.length === 1 &&
+    normalized.customFeeds[0].category === "科技" &&
+    normalized.customFeeds[0].enabled === true
+  );
+}
+
+async function testMediaCachingAndProgress(): Promise<void> {
+  const mediaConfig = mediaWidget.defaultConfig();
+  // 1. Initial cached data check when no network/empty
+  const initialData = getCachedMediaData(mediaConfig);
+  check("getCachedMediaData is function and returns object or null", initialData === null || typeof initialData === "object");
+
+  // 2. Test disk cache save and restore via mock app
+  const storage = new Map<string, string>();
+  const mockApp = {
+    vault: {
+      configDir: ".obsidian",
+      adapter: {
+        exists: async (p: string) => storage.has(p),
+        read: async (p: string) => storage.get(p) ?? "",
+        write: async (p: string, data: string) => { storage.set(p, data); }
+      }
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await saveDiskCacheNow(mockApp as any);
+  const cacheFilePath = ".obsidian/plugins/home-pages/media-cache.json";
+  check("saveDiskCacheNow writes to adapter", storage.has(cacheFilePath));
+  const writtenJson = JSON.parse(storage.get(cacheFilePath) || "{}") as { feedCache?: unknown[] };
+  check("saved disk cache contains feedCache array", Array.isArray(writtenJson.feedCache));
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await loadDiskCache(mockApp as any);
+  check("loadDiskCache loads without throwing", true);
+
+  // 3. Test syncMediaData progress callback
+  let progressCount = 0;
+  let finalComplete = false;
+  const syncResult = await syncMediaData(
+    {
+      ...mediaConfig,
+      showQiushi: false,
+      showZjxc: false,
+      customFeeds: [
+        { name: "测试源1", url: "https://example.com/rss1", enabled: true },
+        { name: "测试源2", url: "https://example.com/rss2", enabled: true }
+      ]
+    },
+    {
+      forceRefresh: true,
+      onProgress: (_completed, _total, _items, isComplete) => {
+        progressCount++;
+        if (isComplete) finalComplete = true;
+      }
+    }
+  );
+  check("syncMediaData triggers onProgress callback", progressCount > 0);
+  check("syncMediaData reports isComplete true at end", finalComplete);
+  check("syncMediaData returns valid MediaData", typeof syncResult.ready === "boolean" && Array.isArray(syncResult.items));
+}
+
 testRegistry();
 testPomodoro();
 testWeatherHelpers();
 testMedia();
+await testOpmlAndFollow();
+await testMediaCachingAndProgress();
 await testDuowei();
 await testDigest();
 await testWechat();

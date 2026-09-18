@@ -3480,6 +3480,247 @@
   pointer-events: none;
 }
 
+/* OPML 导入导出与分类面板样式 */
+.hp-media-opml-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.hp-media-opml-toolbar .hp-opml-btn,
+.hp-media-cat-actions .hp-opml-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+  transition: all 0.15s ease;
+}
+
+.hp-media-opml-toolbar .hp-opml-btn:hover,
+.hp-media-cat-actions .hp-opml-btn:hover {
+  background: var(--interactive-hover);
+}
+
+.hp-media-opml-toolbar .hp-opml-btn.mod-cta {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+.hp-media-opml-toolbar .hp-opml-btn.mod-cta:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.hp-media-cat-actions .hp-opml-btn.mod-warning {
+  color: var(--text-error);
+}
+
+.hp-media-cat-actions .hp-opml-btn.mod-warning:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* 分类折叠面板 */
+.hp-media-cat-group {
+  margin-bottom: 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+.hp-media-cat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.12s ease;
+}
+
+.hp-media-cat-header:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hp-media-cat-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp-media-cat-badge {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.hp-media-cat-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hp-media-cat-body {
+  padding: 4px 12px;
+}
+
+.hp-media-cat-body.is-collapsed {
+  display: none;
+}
+
+/* 多媒体与分类徽章 */
+.hp-media-badge-audio {
+  background: rgba(147, 51, 234, 0.12);
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.25);
+}
+
+.theme-dark .hp-media-badge-audio {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+}
+
+.hp-media-badge-video {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.theme-dark .hp-media-badge-video {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+.hp-media-badge-cat {
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* 缩略图 */
+.hp-media-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-left: 10px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* 顶部极细渐变进度光轨 */
+.hp-media-progress-track {
+  height: 2px;
+  width: 100%;
+  background: var(--background-modifier-border);
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+  margin-bottom: 6px;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.hp-media-progress-track.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hp-media-progress-fill {
+  height: 100%;
+  width: var(--hp-media-progress, 0%);
+  background: linear-gradient(90deg, var(--interactive-accent), #38bdf8);
+  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 2px;
+}
+
+/* 骨架屏与 Shimmer 微光动画 */
+.hp-media-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.hp-media-skeleton-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.hp-media-skeleton-item::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: hp-media-shimmer 1.5s infinite;
+}
+
+.theme-dark .hp-media-skeleton-item::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+}
+
+@keyframes hp-media-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.hp-media-skeleton-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.hp-media-skeleton-line {
+  height: 12px;
+  border-radius: 4px;
+  background: var(--background-modifier-border);
+}
+
+.hp-media-skeleton-line.w-80 { width: 80%; }
+.hp-media-skeleton-line.w-50 { width: 50%; height: 10px; }
+.hp-media-skeleton-line.w-30 { width: 30%; height: 10px; }
+
+/* 刷新旋转图标动画 */
+.hp-media-btn.is-spinning svg {
+  animation: hp-media-spin 0.8s linear infinite;
+}
+
+@keyframes hp-media-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* ==========================================================================
    响应式网格与平板端 / 触控端适配 (Tablet & Touch Optimizations)
    ========================================================================== */

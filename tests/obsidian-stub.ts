@@ -1,4 +1,8 @@
 // 测试用的 obsidian 模块桩：只提供被测模块 import 时需要存在的符号。
+if (typeof (globalThis as unknown as { window?: unknown }).window === "undefined") {
+  (globalThis as unknown as { window: unknown }).window = globalThis;
+}
+
 export class TAbstractFile {
   path = "";
   name = "";

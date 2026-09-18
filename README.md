@@ -39,6 +39,7 @@ Home Pages comes with 12+ built-in productivity widgets that can be freely combi
 | **Tasks & Schedule** *(Duowei Table)* | Scans multidimensional tables (`.duowei`), surfaces overdue, today, upcoming, and recent updates with direct row navigation. | Scan scope, exclude tables, date field mappings, section day limits. |
 | **WeChat Inbox** | Aggregates WeChat sync messages with text, audio transcription, and image thumbnails. | Data source, unorganized filter, days range, type filters. |
 | **Annotations & Review** | Connects to Mobile Ink Annotation Pro to show inbox annotations, daily reviews, and collections. | Card statistics, thumbnail preview, one-click jump to annotation center. |
+| **Media & RSS Subscriptions** | Surfaces articles from mainstream sources and personal custom RSS / OPML feeds. Supports Follow exports, nested categories, podcast/video detection, and offline Markdown clipping. | Channel nav style, default channel, OPML import/export, category organization, clipping folder. |
 
 ---
 
