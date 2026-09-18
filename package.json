@@ -1,6 +1,6 @@
 {
   "name": "home-pages",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A customizable homepage dashboard plugin for Obsidian featuring banners, recent notes, quick access, countdowns, pomodoro, daily quotes, habit tracking, task kanban, and vault statistics.",
   "main": "main.js",
   "scripts": {
