@@ -1,3 +1,42 @@
+# Home Pages v0.2.0 Release Notes
+
+- Release date: September 18, 2026
+- Minimum Obsidian version: 1.7.2
+- Supported platforms: Desktop and Obsidian Mobile (iOS / Android)
+- License: GNU General Public License v3.0
+
+---
+
+## 🌟 New Features & Major Improvements
+
+### 📰 Media & RSS / OPML Subscription Center
+- **Built-in Authoritative Publications**: Curated issues and featured columns from top publications with issue archiving, chapter categories, and reader view.
+- **Robust Custom RSS / OPML Import & Export**:
+  - One-click import of `*.opml` files exported from Follow and other RSS readers, preserving nested folder categories and feed metadata.
+  - Export all personal subscriptions to standard OPML files for seamless cross-vault and cross-tool backup.
+  - Manual addition of custom RSS / Atom feeds with customizable titles, icons, and category tags.
+- **Enhanced WeChat Official Account RSS Support**:
+  - First-class support for WeChat public platform RSS feeds with automatic author extraction, publication timestamp, and cover images.
+  - Automatic parsing and proxying for `data-src` lazy-loaded images.
+- **One-Click Offline Full-Text Clipping**:
+  - Save articles directly into clean Markdown notes inside your chosen vault folder with a single click.
+  - For WeChat and supported sources, extracts full HTML and converts into native Markdown while maintaining headers, formatting, and images.
+- **Podcast & Video Detection**:
+  - Automatic detection of multimedia enclosures (audio podcasts and video streams) with badges and duration indicators.
+- **Channel Navigation**:
+  - Seamless toggle between Tab bar mode and Select dropdown mode.
+  - Smooth pagination and visual unread status indicators.
+
+### 📱 Tablet & Responsive Layout Enhancements
+- **Tablet Layout Optimization**: Fixed horizontal overflow and card clipping on medium-width screens (600px - 1024px).
+- **Adaptive Pomodoro Buttons**:
+  - Resolved button wrapping on wider cards, ensuring comfortable horizontal placement on desktop while folding cleanly on mobile.
+- **Touch & Reading Interaction Polish**:
+  - Enhanced touch scrolling and gesture handling inside the modal article reader.
+  - Improved touch-and-hold responsiveness for grid card dragging on touchscreens.
+
+---
+
 # Home Pages v0.1.0 Release Notes
 
 - Release date: September 15, 2026
