@@ -1,9 +1,11 @@
-import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
+import { App, Modal, Notice, PluginSettingTab, Setting, TFile } from "obsidian";
 import type HomePagesPlugin from "./main";
 import type { HomePage, HomePagesSettings, WidgetInstance } from "./types";
 import { createId } from "./utils/id";
 import { ConfirmModal, MAX_COLUMNS, MAX_ROWS, PromptModal } from "./ui/modals";
+import { addPathSetting } from "./ui/settingHelpers";
 import { createWidgetInstance, isWidgetKind } from "./widgets/registry";
+import { PasteWidgetModal } from "./widgets/userLoader";
 
 export const SETTINGS_VERSION = 1;
 
@@ -16,7 +18,10 @@ export const DEFAULT_SETTINGS: HomePagesSettings = {
   rowHeight: 40,
   gap: 16,
   maxWidth: 1400,
-  alwaysShowPageTabs: false
+  alwaysShowPageTabs: true,
+  customWidgetsFolder: "",
+  autoAddCustomWidgets: true,
+  seenCustomWidgetKinds: []
 };
 
 /** 默认首页：复刻“场景·首页｜个人主页”的布局。 */
@@ -84,7 +89,13 @@ export function sanitizeSettings(raw: unknown): HomePagesSettings {
     rowHeight: clamp(value.rowHeight, 24, 96) ?? DEFAULT_SETTINGS.rowHeight,
     gap: clamp(value.gap, 4, 40) ?? DEFAULT_SETTINGS.gap,
     maxWidth: clamp(value.maxWidth, 0, 4000) ?? DEFAULT_SETTINGS.maxWidth,
-    alwaysShowPageTabs: value.alwaysShowPageTabs ?? DEFAULT_SETTINGS.alwaysShowPageTabs
+    alwaysShowPageTabs: value.alwaysShowPageTabs ?? DEFAULT_SETTINGS.alwaysShowPageTabs,
+    customWidgetsFolder:
+      typeof value.customWidgetsFolder === "string" ? value.customWidgetsFolder.trim() : DEFAULT_SETTINGS.customWidgetsFolder,
+    autoAddCustomWidgets: value.autoAddCustomWidgets ?? DEFAULT_SETTINGS.autoAddCustomWidgets,
+    seenCustomWidgetKinds: Array.isArray(value.seenCustomWidgetKinds)
+      ? [...new Set(value.seenCustomWidgetKinds.filter((kind): kind is string => typeof kind === "string"))]
+      : []
   };
   if (!settings.pages.some((page) => page.id === settings.activePageId)) settings.activePageId = settings.pages[0].id;
   return settings;
@@ -142,7 +153,7 @@ export class HomePagesSettingTab extends PluginSettingTab {
         this.plugin.refreshViews({ layoutOnly: true });
       }));
     new Setting(containerEl).setName("始终显示页面标签栏")
-      .setDesc("默认只有多个页面或处于编辑模式时才显示。")
+      .setDesc("关闭后，只有多个页面或处于编辑模式时才显示。标签栏末尾的“+”可直接新建页面。")
       .addToggle((toggle) => toggle.setValue(settings.alwaysShowPageTabs).onChange(async (value) => {
         settings.alwaysShowPageTabs = value;
         await this.plugin.saveSettings();
@@ -200,6 +211,84 @@ export class HomePagesSettingTab extends PluginSettingTab {
           this.display();
         }).open();
       }));
+
+    new Setting(containerEl).setName("自定义组件").setHeading();
+    addPathSetting(containerEl, this.app, {
+      name: "自定义组件目录",
+      desc: "放置自定义组件 JavaScript (.js) 脚本的库内目录。保存修改即自动生效并支持热重载。",
+      placeholder: "_scripts/home-pages",
+      value: settings.customWidgetsFolder,
+      suggest: { folders: true, files: false },
+      onChange: (value) => {
+        settings.customWidgetsFolder = value.trim();
+      },
+      onCommit: async (value) => {
+        settings.customWidgetsFolder = value.trim();
+        await this.plugin.saveSettings();
+        await this.plugin.customWidgetManager.loadAll();
+      }
+    });
+    new Setting(containerEl).setName("新组件自动加入首页")
+      .setDesc("在组件目录里新建的脚本第一次加载成功时，自动放到当前首页。之后删掉卡片、再修改脚本不会重新加入。")
+      .addToggle((toggle) => toggle.setValue(settings.autoAddCustomWidgets).onChange(async (value) => {
+        settings.autoAddCustomWidgets = value;
+        await this.plugin.saveSettings();
+      }));
+    new Setting(containerEl)
+      .setName("组件开发与注册")
+      .setDesc("直接粘贴代码创建组件、生成示例模板文件，或重新扫描加载已修改的脚本。")
+      .addButton((button) =>
+        button.setButtonText("📋 粘贴代码新建组件").setCta().onClick(() => {
+          new PasteWidgetModal(this.app, this.plugin).open();
+        })
+      )
+      .addButton((button) =>
+        button.setButtonText("📄 生成示例模板").onClick(async () => {
+          await this.plugin.customWidgetManager.createDemoTemplate();
+          this.display();
+        })
+      )
+      .addButton((button) =>
+        button.setButtonText("🔄 重新扫描加载").onClick(async () => {
+          const count = await this.plugin.customWidgetManager.loadAll();
+          new Notice(`Home Pages: 已成功载入 ${count} 个自定义组件`);
+        })
+      );
+
+    const loadedCustomWidgets = this.plugin.customWidgetManager.getLoadedWidgets();
+    new Setting(containerEl).setName("已安装的自定义组件").setHeading();
+    if (loadedCustomWidgets.length === 0) {
+      new Setting(containerEl)
+        .setName("暂无已加载的自定义组件")
+        .setDesc("未在自定义组件目录中检测到已注册的 JavaScript 组件。可通过上方按钮粘贴代码或生成示例模板。");
+    } else {
+      for (const w of loadedCustomWidgets) {
+        new Setting(containerEl)
+          .setName(w.name)
+          .setDesc(`${w.description ? `${w.description} — ` : ""}标识: ${w.kind} | 文件: ${w.filePath}`)
+          .addButton((button) =>
+            button.setButtonText("📄 打开代码").onClick(async () => {
+              const file = this.app.vault.getAbstractFileByPath(w.filePath);
+              if (file instanceof TFile) {
+                const leaf = this.app.workspace.getLeaf(false);
+                await leaf.openFile(file);
+              } else {
+                new Notice(`未找到文件：${w.filePath}`);
+              }
+            })
+          )
+          .addButton((button) =>
+            button
+              .setButtonText("🗑️ 删除")
+              .setWarning()
+              .onClick(() => {
+                this.plugin.customWidgetManager.promptDeleteWidget(w.kind, () => {
+                  this.display();
+                });
+              })
+          );
+      }
+    }
 
     new Setting(containerEl).setName("备份与迁移").setHeading();
     new Setting(containerEl).setName("导出布局").setDesc("把所有页面与组件配置复制为 JSON。")

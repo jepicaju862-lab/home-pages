@@ -26,6 +26,8 @@
   padding: 18px 20px 40px;
   container-type: inline-size;
   overflow-x: clip;
+  /* 拖动预览与缩放虚线框按页面根定位。 */
+  position: relative;
 }
 
 .theme-dark .hp-root {
@@ -143,7 +145,8 @@
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-auto-rows: var(--hp-row);
-  grid-auto-flow: row dense;
+  /* Keep the visual order consistent with the saved widget order. */
+  grid-auto-flow: row;
   gap: var(--hp-gap);
 }
 
@@ -344,10 +347,29 @@
 
 .hp-root.is-editing .hp-card {
   cursor: grab;
+  user-select: none;
 }
 
 .hp-root.is-editing .hp-card-grip {
   display: inline-flex;
+}
+
+.hp-root.is-editing .hp-card-header,
+.hp-root.is-editing .hp-tab[data-id] {
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.hp-grid.is-sorting,
+.hp-tabs.is-sorting {
+  user-select: none;
+  cursor: grabbing;
+}
+
+.hp-grid.is-sorting .hp-card,
+.hp-tabs.is-sorting .hp-tab {
+  cursor: grabbing;
 }
 
 .hp-root.is-editing .hp-card-body {
@@ -360,12 +382,46 @@
   display: none;
 }
 
-.hp-card.is-dragging {
-  opacity: 0.4;
+/* 原卡片留在原位当占位：虚线框 + 淡化，预览副本跟着指针走。 */
+.hp-card.is-dragging,
+.hp-tab.is-dragging {
+  opacity: 0.35;
+  outline: 2px dashed var(--interactive-accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.hp-sort-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  margin: 0;
+  pointer-events: none;
+  opacity: 0.94;
+  cursor: grabbing;
+  box-shadow: 0 22px 44px -14px rgba(15, 23, 42, 0.45), 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 40%, transparent);
+  will-change: transform;
+  transition: none !important;
+}
+
+.hp-resize-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  border: 2px dashed var(--interactive-accent);
+  border-radius: var(--hp-radius);
+  background: color-mix(in srgb, var(--interactive-accent) 6%, transparent);
+  pointer-events: none;
+  will-change: transform, width, height;
 }
 
 .hp-card.drop-before::before,
-.hp-card.drop-after::after {
+.hp-card.drop-after::after,
+.hp-tab.drop-before::before,
+.hp-tab.drop-after::after {
   content: "";
   position: absolute;
   top: 6px;
@@ -373,15 +429,50 @@
   width: 4px;
   border-radius: 2px;
   background: var(--interactive-accent);
+  pointer-events: none;
   z-index: 3;
 }
 
 .hp-card.drop-before::before {
-  left: -2px;
+  left: 2px;
 }
 
 .hp-card.drop-after::after {
-  right: -2px;
+  right: 2px;
+}
+
+.hp-card.drop-vertical.drop-before::before,
+.hp-tab.drop-vertical.drop-before::before,
+.hp-card.drop-vertical.drop-after::after,
+.hp-tab.drop-vertical.drop-after::after {
+  left: 6px;
+  right: 6px;
+  width: auto;
+  height: 4px;
+  bottom: auto;
+}
+
+.hp-card.drop-vertical.drop-before::before,
+.hp-tab.drop-vertical.drop-before::before {
+  top: 2px;
+}
+
+.hp-card.drop-vertical.drop-after::after,
+.hp-tab.drop-vertical.drop-after::after {
+  top: auto;
+  bottom: 2px;
+}
+
+.hp-tab {
+  position: relative;
+}
+
+.hp-tab.drop-before::before {
+  left: 0;
+}
+
+.hp-tab.drop-after::after {
+  right: 0;
 }
 
 .hp-card-editbar {
@@ -450,6 +541,98 @@
   min-width: 16px;
   color: var(--text-normal);
   text-align: center;
+}
+
+/* ---- 编辑模式：列参考线与拖动缩放 ------------------------------------------- */
+
+/* 12 列参考线：每个周期 = 一列 + 一个间距，只在卡片之间的空隙与空位里露出来。 */
+.hp-root.is-editing .hp-grid {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--interactive-accent) 7%, transparent) 0,
+    color-mix(in srgb, var(--interactive-accent) 7%, transparent) calc(100% - var(--hp-gap)),
+    transparent calc(100% - var(--hp-gap))
+  );
+  background-size: calc((100% + var(--hp-gap)) / 12) 100%;
+  background-repeat: repeat-x;
+  border-radius: var(--hp-radius);
+}
+
+.hp-root.is-resizing .hp-grid {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--interactive-accent) 14%, transparent) 0,
+    color-mix(in srgb, var(--interactive-accent) 14%, transparent) calc(100% - var(--hp-gap)),
+    transparent calc(100% - var(--hp-gap))
+  );
+}
+
+.hp-card-resize {
+  display: none;
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  z-index: 4;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--hp-accent);
+  background: var(--hp-card-bg);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.hp-card-resize svg {
+  width: 14px;
+  height: 14px;
+}
+
+.hp-card-resize:hover,
+.hp-card-resize:focus-visible {
+  background: color-mix(in srgb, var(--hp-accent) 16%, var(--hp-card-bg));
+}
+
+.hp-card-resize:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.hp-root.is-editing .hp-card-resize {
+  display: inline-flex;
+}
+
+/* 给右下角手柄留出位置，免得压住编辑栏的删除按钮。 */
+.hp-root.is-editing .hp-card-editbar {
+  padding-right: 26px;
+}
+
+.hp-root.is-resizing,
+.hp-root.is-resizing * {
+  cursor: nwse-resize !important;
+  user-select: none;
+}
+
+.hp-card.is-resizing {
+  z-index: 5;
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -1px;
+}
+
+.hp-card-size-badge {
+  position: absolute;
+  right: 28px;
+  bottom: 6px;
+  z-index: 5;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 /* ---- 通用列表（最近笔记 / 那年今日） ---------------------------------------- */
@@ -656,6 +839,13 @@
   font-weight: 850;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+.hp-hero-clock-seconds {
+  margin-left: 1px;
+  font-size: 0.45em;
+  font-weight: 700;
+  opacity: 0.7;
 }
 
 .hp-hero-date {
@@ -1270,6 +1460,27 @@
   gap: 4px;
 }
 
+.hp-habit-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  color: var(--hp-accent);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hp-habit-streak-icon {
+  display: inline-flex;
+}
+
+.hp-habit-streak-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
 .hp-pill {
   padding: 2px 11px;
   border: none;
@@ -1865,6 +2076,7 @@
 }
 
 .hp-add-card {
+  position: relative;
   display: flex;
   gap: 10px;
   padding: 12px;
@@ -1923,6 +2135,84 @@
   font-size: 11px;
 }
 
+.hp-paste-error {
+  color: var(--text-error);
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.hp-add-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+
+.hp-add-topbar-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.hp-add-card-paste {
+  border-style: dashed;
+  --hp-accent: #6366f1;
+}
+
+.hp-add-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hp-add-card-custom-tag {
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--hp-accent) 20%, transparent);
+  color: var(--hp-accent);
+}
+
+.hp-add-card-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.hp-add-card:hover .hp-add-card-del {
+  opacity: 1;
+}
+
+.hp-add-card-del:hover {
+  color: var(--text-error);
+  background: var(--background-modifier-hover);
+}
+
+.hp-delete-meta {
+  margin: 10px 0 16px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--background-secondary);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 /* ---- 响应式：窄容器时所有卡片占满一行 --------------------------------------- */
 
 @container (max-width: 720px) {
@@ -1932,6 +2222,12 @@
 
   .hp-card {
     grid-column: 1 / -1 !important;
+  }
+
+  /* 窄屏卡片总是占满一行，列参考线没有意义。 */
+  .hp-root.is-editing .hp-grid,
+  .hp-root.is-resizing .hp-grid {
+    background-image: none;
   }
 
   .hp-hero-greeting {
@@ -4382,6 +4678,4 @@
   -webkit-user-select: none;
   user-select: none;
 }
-
-
 

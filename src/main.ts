@@ -5,6 +5,7 @@ import { resumePomodoroTimers } from "./widgets/pomodoro";
 import { createApi, type HomePagesApi } from "./api";
 import type { HomePage, HomePagesSettings, WidgetKind } from "./types";
 import { HomeView, VIEW_TYPE_HOME } from "./view";
+import { CustomWidgetManager, DeleteCustomWidgetSuggestModal, PasteWidgetModal } from "./widgets/userLoader";
 
 type SettingApp = { setting?: { open: () => void; openTabById: (id: string) => void } };
 
@@ -12,6 +13,8 @@ export default class HomePagesPlugin extends Plugin {
   settings: HomePagesSettings = { ...DEFAULT_SETTINGS, pages: [createDefaultPage()] };
   /** 对外 API：其他插件用 app.plugins.plugins["home-pages"].api 注册自己的首页组件。 */
   api: HomePagesApi = createApi(this);
+  /** 自定义脚本组件管理器：负责扫描指定目录、热重载与示例生成。 */
+  readonly customWidgetManager = new CustomWidgetManager(this);
   private saveTimer: number | null = null;
   private pendingSave: Promise<void> | null = null;
   private resolveSave: (() => void) | null = null;
@@ -53,17 +56,43 @@ export default class HomePagesPlugin extends Plugin {
       name: "把「待办与日程 / 批注与复习 / 微信收件」加入当前首页",
       callback: () => void this.addSourceWidgets()
     });
+    this.addCommand({
+      id: "paste-custom-widget",
+      name: "粘贴代码新建自定义组件",
+      callback: () => new PasteWidgetModal(this.app, this).open()
+    });
+    this.addCommand({
+      id: "delete-custom-widget",
+      name: "删除自定义组件",
+      callback: () => {
+        const widgets = this.customWidgetManager.getLoadedWidgets();
+        if (widgets.length === 0) {
+          new Notice("当前没有已载入的自定义组件");
+          return;
+        }
+        if (widgets.length === 1) {
+          this.customWidgetManager.promptDeleteWidget(widgets[0].kind);
+          return;
+        }
+        new DeleteCustomWidgetSuggestModal(this.app, widgets, (item) => {
+          this.customWidgetManager.promptDeleteWidget(item.kind);
+        }).open();
+      }
+    });
     this.addSettingTab(new HomePagesSettingTab(this.app, this));
 
     // 通知晚于本插件加载 / 正在监听的插件：可以注册组件了。
     (this.app.workspace as unknown as { trigger(name: string, ...data: unknown[]): void }).trigger("home-pages:ready", this.api);
 
-    this.app.workspace.onLayoutReady(() => {
+    this.customWidgetManager.registerWatcher();
+    this.app.workspace.onLayoutReady(async () => {
+      await this.customWidgetManager.loadAll(true);
       if (this.settings.openOnStartup && this.getHomeLeaves().length === 0) void this.openHome();
     });
   }
 
   onunload(): void {
+    this.customWidgetManager.unloadAll();
     if (this.saveTimer !== null) {
       window.clearTimeout(this.saveTimer);
       this.saveTimer = null;

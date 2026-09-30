@@ -1,5 +1,5 @@
 import { App, Notice, Setting, TFile, setIcon } from "obsidian";
-import { MONTH_LABELS, buildRecentDays, parseIsoDate, todayIso } from "../utils/date";
+import { MONTH_LABELS, buildRecentDays, parseIsoDate, toIsoDate, todayIso } from "../utils/date";
 import { findDailyNote, getOrCreateDailyNote } from "../utils/vault";
 import { addTextareaSetting } from "../ui/settingHelpers";
 import { WidgetContext, WidgetDefinition, normalizeWith, toStringList } from "./types";
@@ -59,6 +59,16 @@ export const habitWidget: WidgetDefinition<HabitConfig> = {
 
     const wrap = body.createDiv({ cls: `hp-habit is-range-${config.range}` });
     const toolbar = wrap.createDiv({ cls: "hp-habit-toolbar" });
+    // 本地记录有完整历史；Daily Note 模式只读取了当前范围内的日记，连续天数最多数到范围开头。
+    const habitSet = new Set(config.habits);
+    const streak = config.storage === "plugin"
+      ? habitStreak((iso) => (config.checkins[iso] ?? []).some((habit) => habitSet.has(habit)), today)
+      : habitStreak((iso) => (doneByDate.get(iso)?.size ?? 0) > 0, today, days.length);
+    if (streak > 0) {
+      const badge = toolbar.createSpan({ cls: "hp-habit-streak", attr: { title: "连续有打卡的天数（今天还没打卡不算中断）" } });
+      setIcon(badge.createSpan({ cls: "hp-habit-streak-icon" }), "flame");
+      badge.createSpan({ text: `连续 ${streak} 天` });
+    }
     const noteButton = toolbar.createEl("button", { cls: "hp-pill", text: "日记", attr: { type: "button", title: "打开今天的日记" } });
     noteButton.addEventListener("click", () => void openDaily(ctx, today));
     for (const range of ["week", "month", "year"] as HabitRange[]) {
@@ -118,6 +128,19 @@ export const habitWidget: WidgetDefinition<HabitConfig> = {
       }));
   }
 };
+
+/** 截至今天的连续打卡天数；今天还没打卡时从昨天往回数，不算中断。 */
+export function habitStreak(isDone: (iso: string) => boolean, today: string, limit = 3660): number {
+  const cursor = parseIsoDate(today);
+  if (!cursor) return 0;
+  if (!isDone(today)) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (streak < limit && isDone(toIsoDate(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
 
 async function loadCheckins(app: App, config: HabitConfig, days: string[]): Promise<Map<string, Set<string>>> {
   const habitSet = new Set(config.habits);

@@ -19,6 +19,7 @@ export interface HeroConfig extends Record<string, unknown> {
   showGreeting: boolean;
   showMeta: boolean;
   showClock: boolean;
+  showSeconds: boolean;
   showWeather: boolean;
   showVaultAge: boolean;
   showCountdown: boolean;
@@ -41,6 +42,7 @@ const DEFAULTS: HeroConfig = {
   showGreeting: true,
   showMeta: true,
   showClock: true,
+  showSeconds: false,
   showWeather: true,
   showVaultAge: true,
   showCountdown: true,
@@ -101,13 +103,15 @@ export const heroWidget: WidgetDefinition<HeroConfig> = {
     if (config.showClock || wantWeather) {
       const right = top.createDiv({ cls: "hp-hero-clockbox" });
       if (config.showClock) {
-        const clock = right.createDiv({ cls: "hp-hero-clock", text: clockLabel(now) });
-        const date = right.createDiv({ cls: "hp-hero-date", text: dateLabel(now) });
-        ctx.registerInterval(() => {
-          const current = new Date();
+        const clock = right.createDiv({ cls: "hp-hero-clock" });
+        const date = right.createDiv({ cls: "hp-hero-date" });
+        const paint = (current: Date): void => {
           clock.setText(clockLabel(current));
+          if (config.showSeconds) clock.createSpan({ cls: "hp-hero-clock-seconds", text: `:${String(current.getSeconds()).padStart(2, "0")}` });
           date.setText(dateLabel(current));
-        }, 1000);
+        };
+        paint(now);
+        ctx.registerInterval(() => paint(new Date()), 1000);
       }
       if (wantWeather) {
         const box = right.createDiv({ cls: "hp-hero-weather" });
@@ -167,6 +171,7 @@ export const heroWidget: WidgetDefinition<HeroConfig> = {
       ["showGreeting", "问候语"],
       ["showMeta", "笔记 / 标签数量"],
       ["showClock", "实时时钟"],
+      ["showSeconds", "时钟显示秒"],
       ["showVaultAge", "库龄徽章"],
       ["showCountdown", "倒计时徽章"]
     ];

@@ -24,10 +24,28 @@ export class Component {
     return child;
   }
 }
+export class ItemView extends Component {
+  app: unknown;
+  contentEl: HTMLElement;
+  constructor(public leaf: { app: unknown; contentEl: HTMLElement }) {
+    super();
+    this.app = leaf.app;
+    this.contentEl = leaf.contentEl;
+  }
+  addAction(): void {}
+  registerEvent(): void {}
+  register(): void {}
+}
 export class Modal {
   constructor(public app: unknown) {}
   open(): void {}
   close(): void {}
+}
+export abstract class FuzzySuggestModal<T> extends Modal {
+  setPlaceholder(_placeholder: string): void {}
+  abstract getItems(): T[];
+  abstract getItemText(item: T): string;
+  abstract onChooseItem(item: T): void;
 }
 export class Notice {
   constructor(public message: string) {

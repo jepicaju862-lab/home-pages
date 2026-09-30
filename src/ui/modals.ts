@@ -1,7 +1,7 @@
 import { App, Modal, Setting, setIcon } from "obsidian";
 import type HomePagesPlugin from "../main";
 import type { WidgetInstance, WidgetKind } from "../types";
-import { getWidgetDefinition, listWidgetDefinitions, normalizeWidgetConfig } from "../widgets/registry";
+import { getWidgetDefinition, isBuiltinKind, listWidgetDefinitions, normalizeWidgetConfig } from "../widgets/registry";
 import type { WidgetSettingsContext } from "../widgets/types";
 
 export const MAX_COLUMNS = 12;
@@ -81,21 +81,74 @@ export class WidgetSettingsModal extends Modal {
 
 /** 选择要添加的组件类型。 */
 export class AddWidgetModal extends Modal {
-  constructor(app: App, private readonly onPick: (kind: WidgetKind) => void) {
+  constructor(
+    app: App,
+    private readonly onPick: (kind: WidgetKind) => void,
+    private readonly onPaste?: () => void,
+    private readonly plugin?: HomePagesPlugin
+  ) {
     super(app);
   }
 
   onOpen(): void {
     this.modalEl.addClass("hp-modal");
     this.titleEl.setText("添加组件");
+
+    if (this.onPaste) {
+      const topBar = this.contentEl.createDiv({ cls: "hp-add-topbar" });
+      topBar.createDiv({ cls: "hp-add-topbar-text", text: "想使用自定义代码或脚本卡片？" });
+
+      const pasteBtn = topBar.createEl("button", {
+        cls: "mod-cta",
+        text: "📋 粘贴代码新建组件"
+      });
+      pasteBtn.addEventListener("click", () => {
+        this.close();
+        this.onPaste?.();
+      });
+    }
+
     const grid = this.contentEl.createDiv({ cls: "hp-add-grid" });
+
+    if (this.onPaste) {
+      const pasteCard = grid.createDiv({ cls: "hp-add-card hp-add-card-paste" });
+      setIcon(pasteCard.createDiv({ cls: "hp-add-icon" }), "code-xml");
+      const ptext = pasteCard.createDiv({ cls: "hp-add-text" });
+      ptext.createDiv({ cls: "hp-add-name", text: "＋ 粘贴代码新建组件" });
+      ptext.createDiv({ cls: "hp-add-desc", text: "直接粘贴一段 JavaScript 脚本创建并加入当前首页" });
+      pasteCard.addEventListener("click", () => {
+        this.close();
+        this.onPaste?.();
+      });
+    }
+
     for (const definition of listWidgetDefinitions()) {
-      const card = grid.createDiv({ cls: "hp-add-card" });
+      const isCustom = !isBuiltinKind(definition.kind) && (this.plugin?.customWidgetManager.hasKind(definition.kind) ?? false);
+      const card = grid.createDiv({ cls: `hp-add-card${isCustom ? " hp-add-card-user" : ""}` });
       card.style.setProperty("--hp-accent", definition.accent);
       setIcon(card.createDiv({ cls: "hp-add-icon" }), definition.icon);
       const text = card.createDiv({ cls: "hp-add-text" });
-      text.createDiv({ cls: "hp-add-name", text: definition.name });
+      const nameRow = text.createDiv({ cls: "hp-add-name-row" });
+      nameRow.createDiv({ cls: "hp-add-name", text: definition.name });
+      if (isCustom) {
+        nameRow.createSpan({ cls: "hp-add-card-custom-tag", text: "自定义" });
+      }
       text.createDiv({ cls: "hp-add-desc", text: definition.description });
+
+      if (isCustom && this.plugin) {
+        const delBtn = card.createEl("button", {
+          cls: "hp-add-card-del",
+          attr: { type: "button", "aria-label": "删除自定义组件", title: "删除自定义组件" }
+        });
+        setIcon(delBtn, "trash-2");
+        delBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          this.plugin?.customWidgetManager.promptDeleteWidget(definition.kind, () => {
+            card.remove();
+          });
+        });
+      }
+
       card.addEventListener("click", () => {
         this.close();
         this.onPick(definition.kind);
