@@ -323,7 +323,7 @@ type InkBridge = {
 function getInkBridge(ctx: WidgetContext<AnnotationsConfig>): InkBridge | null {
   const plugins = (ctx.app as App & { plugins?: { plugins?: Record<string, unknown> } }).plugins?.plugins;
   const plugin = plugins?.[ctx.config.pluginId];
-  return plugin && typeof plugin === "object" ? plugin as InkBridge : null;
+  return plugin && typeof plugin === "object" ? plugin : null;
 }
 
 function openQuestion(ctx: WidgetContext<AnnotationsConfig>, questionId: string): void {

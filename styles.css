@@ -185,6 +185,8 @@
   background: var(--hp-card-bg);
   box-shadow: var(--hp-shadow);
   transition: box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+  grid-column: span var(--hp-card-w, 6);
+  grid-row: span var(--hp-card-h, 6);
 }
 
 .hp-card-header {
@@ -402,7 +404,7 @@
   cursor: grabbing;
   box-shadow: 0 22px 44px -14px rgba(15, 23, 42, 0.45), 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 40%, transparent);
   will-change: transform;
-  transition: none !important;
+  transition: none;
 }
 
 .hp-resize-frame {
@@ -925,6 +927,7 @@
 
 .hp-quicklinks {
   display: grid;
+  grid-template-columns: repeat(var(--hp-cols, 3), minmax(0, 1fr));
   flex: 1;
   gap: 10px;
   align-content: start;
@@ -1297,7 +1300,7 @@
   }
 
   .hp-pomo-main {
-    flex-direction: column !important;
+    flex-direction: column;
     justify-content: center;
     gap: 6px;
     min-height: 0;
@@ -1324,7 +1327,7 @@
   }
 
   .hp-pomo-task {
-    display: none !important;
+    display: none;
   }
 
   .hp-pomo-rounds {
@@ -1356,7 +1359,7 @@
   }
 
   .hp-pomo-task {
-    display: none !important;
+    display: none;
   }
 
   .hp-pomo-side {
@@ -1371,7 +1374,7 @@
 /* 很矮的卡片（≤ 165px 高度）：隐藏顶部阶段切换胶囊，按需收敛环尺寸 */
 @container (max-height: 165px) {
   .hp-pomo-phases {
-    display: none !important;
+    display: none;
   }
 
   .hp-pomo-ring {
@@ -1679,6 +1682,7 @@
 
 .hp-kanban {
   display: grid;
+  grid-template-columns: repeat(var(--hp-cols, 3), minmax(0, 1fr));
   flex: 1;
   gap: 8px;
   min-height: 0;
@@ -1881,6 +1885,7 @@
 
 .hp-stats {
   display: grid;
+  grid-template-columns: repeat(var(--hp-cols, 3), minmax(0, 1fr));
   flex: 1;
   gap: 8px;
   align-content: center;
@@ -2221,7 +2226,7 @@
   }
 
   .hp-card {
-    grid-column: 1 / -1 !important;
+    grid-column: 1 / -1;
   }
 
   /* 窄屏卡片总是占满一行，列参考线没有意义。 */
@@ -4153,7 +4158,7 @@
   .hp-card[data-w="4"],
   .hp-card[data-w="5"],
   .hp-card[data-w="6"] {
-    grid-column: span 6 !important;
+    grid-column: span 6;
   }
 
   /* 大于 6 列的宽卡片在平板端铺满整行 */
@@ -4163,13 +4168,13 @@
   .hp-card[data-w="10"],
   .hp-card[data-w="11"],
   .hp-card[data-w="12"] {
-    grid-column: span 12 !important;
+    grid-column: span 12;
   }
 
   /* 横幅组件在平板端保持整行并且高度适度自适应，防止问候语/时钟/天气/标签溢出 */
   .hp-card-hero {
-    grid-column: 1 / -1 !important;
-    grid-row: span 5 !important;
+    grid-column: 1 / -1;
+    grid-row: span 5;
   }
   .hp-hero {
     padding: 12px 18px 14px;
@@ -4221,10 +4226,10 @@
     gap: 12px;
   }
   .hp-card {
-    grid-column: 1 / -1 !important;
+    grid-column: 1 / -1;
   }
   .hp-card-hero {
-    grid-row: span 6 !important;
+    grid-row: span 6;
   }
   .hp-card-header {
     padding: 9px 12px;
@@ -4377,7 +4382,7 @@
 /* 窄卡片下（<= 480px，如平板双列布局的半宽卡片），3 列自动切换为横向平滑触控滑动 */
 @container (max-width: 480px) {
   .hp-kanban {
-    display: flex !important;
+    display: flex;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x mandatory;
@@ -4446,7 +4451,7 @@
 /* 窄卡片自适应列数，防止 3~4 列挤压变形 */
 @container (max-width: 360px) {
   .hp-quicklinks {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 8px;
   }
@@ -4454,7 +4459,7 @@
 
 @container (max-width: 240px) {
   .hp-quicklinks {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -4552,7 +4557,7 @@
 /* ---- F. 库统计（Vault Statistics）组件适配 --------------------------------- */
 @container (max-width: 380px) {
   .hp-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

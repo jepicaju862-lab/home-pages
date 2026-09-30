@@ -53,7 +53,7 @@ export const onThisDayWidget: WidgetDefinition<OnThisDayConfig> = {
     const items = app.vault.getMarkdownFiles()
       .filter((file) => isInScope(file, config.folder) && !isExcluded(file, config.excludeFolders))
       .map((file) => {
-        const fm = app.metadataCache.getFileCache(file)?.frontmatter ?? {};
+        const fm: Record<string, unknown> = app.metadataCache.getFileCache(file)?.frontmatter ?? {};
         let iso = firstIsoDateString(...config.dateFields.map((field) => fm[field]));
         if (!iso && config.useFilenameDate) iso = file.basename.match(/\d{4}-\d{2}-\d{2}/)?.[0];
         if (!iso && config.fallbackCtime) iso = firstIsoDateString(file.stat.ctime);

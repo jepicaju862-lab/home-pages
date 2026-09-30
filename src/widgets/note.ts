@@ -51,7 +51,7 @@ export const noteWidget: WidgetDefinition<NoteConfig> = {
     await MarkdownRenderer.render(app, source, wrap, file.path, child);
     // 自定义视图里内部链接不会自动跳转，这里手动接管。
     wrap.addEventListener("click", (event) => {
-      const link = (event.target as HTMLElement).closest("a.internal-link") as HTMLAnchorElement | null;
+      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a.internal-link");
       if (!link) return;
       event.preventDefault();
       const href = link.dataset.href ?? link.getAttribute("href") ?? "";

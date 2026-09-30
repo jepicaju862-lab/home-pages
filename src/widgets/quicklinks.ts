@@ -40,7 +40,7 @@ export const quicklinksWidget: WidgetDefinition<QuicklinksConfig> = {
     const { app, config } = ctx;
     ctx.setSubtitle(`${config.pins.length} 个入口`);
     const grid = body.createDiv({ cls: "hp-quicklinks" });
-    grid.style.gridTemplateColumns = `repeat(${config.columns}, minmax(0, 1fr))`;
+    grid.style.setProperty("--hp-cols", String(config.columns));
     if (config.pins.length === 0) {
       grid.createDiv({ cls: "hp-empty", text: "点击右上角齿轮添加入口" });
       return;

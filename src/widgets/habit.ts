@@ -214,7 +214,7 @@ function renderCalendar(
   while (padded.length < weeks * 7) padded.push(null);
 
   // 每列第一个有效日期落在新月份时标注月份。
-  const monthLabels: string[] = new Array(weeks).fill("");
+  const monthLabels: string[] = Array.from({ length: weeks }, () => "");
   let lastMonth = -1;
   for (let week = 0; week < weeks; week++) {
     for (let row = 0; row < 7; row++) {
@@ -322,8 +322,8 @@ async function readDoneFromDaily(app: App, file: TFile, heading: string): Promis
     return done;
   }
   // 兼容 frontmatter habits: [早起, 阅读] 或 habits: {早起: true}。
-  const raw = app.metadataCache.getFileCache(file)?.frontmatter?.habits;
-  if (Array.isArray(raw)) return raw.map((item) => String(item).trim()).filter(Boolean);
+  const raw: unknown = app.metadataCache.getFileCache(file)?.frontmatter?.habits;
+  if (Array.isArray(raw)) return (raw as unknown[]).map((item) => String(item).trim()).filter(Boolean);
   if (raw && typeof raw === "object") {
     return Object.entries(raw as Record<string, unknown>)
       .filter(([, value]) => value === true || value === "true" || value === 1)

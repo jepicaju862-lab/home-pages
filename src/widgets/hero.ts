@@ -177,7 +177,7 @@ export const heroWidget: WidgetDefinition<HeroConfig> = {
     ];
     for (const [key, label] of toggles) {
       new Setting(container).setName(label)
-        .addToggle((toggle) => toggle.setValue(Boolean(config[key])).onChange((value) => ctx.update({ [key]: value } as Partial<HeroConfig>)));
+        .addToggle((toggle) => toggle.setValue(Boolean(config[key])).onChange((value) => ctx.update({ [key]: value })));
     }
 
     addSectionHeading(container, "天气");

@@ -72,7 +72,7 @@ export const kanbanWidget: WidgetDefinition<KanbanConfig> = {
     const columns = allColumns.filter((column) => !(config.hideDone && column.id === "done"));
 
     const board = body.createDiv({ cls: "hp-kanban" });
-    board.style.gridTemplateColumns = `repeat(${columns.length}, minmax(0, 1fr))`;
+    board.style.setProperty("--hp-cols", String(columns.length));
     for (const column of columns) {
       const items = records.filter((record) => record.status === column.id);
       const columnEl = board.createDiv({ cls: `hp-kanban-column is-${column.id}` });

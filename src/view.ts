@@ -331,8 +331,6 @@ export class HomeView extends ItemView {
     card.setAttribute("data-h", String(h));
     card.style.setProperty("--hp-card-w", String(w));
     card.style.setProperty("--hp-card-h", String(h));
-    card.style.gridColumn = `span ${w}`;
-    card.style.gridRow = `span ${h}`;
   }
 
   private renderEditBar(card: HTMLElement, widget: WidgetInstance): void {

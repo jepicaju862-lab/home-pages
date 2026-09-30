@@ -317,14 +317,15 @@ export const duoweiWidget: WidgetDefinition<DuoweiConfig> = {
     const fieldOptions: Record<string, string> = { "": "（不使用）" };
     for (const field of doc?.fields ?? []) fieldOptions[field.name] = `${field.name}（${field.type}）`;
     const fieldDropdown = (name: string, desc: string, key: keyof DuoweiConfig, filter?: (field: DuoweiField) => boolean): void => {
-      const options = filter && doc
-        ? Object.fromEntries([["", "（不使用）"], ...doc.fields.filter(filter).map((field) => [field.name, `${field.name}（${field.type}）`])])
-        : fieldOptions;
+      const options: Record<string, string> = { ...fieldOptions };
+      if (filter && doc) {
+        for (const field of doc.fields) if (!filter(field)) delete options[field.name];
+      }
       const setting = new Setting(container).setName(name).setDesc(desc);
       if (doc) {
-        setting.addDropdown((dropdown) => dropdown.addOptions(options).setValue(String(config[key] ?? "")).onChange((value) => ctx.update({ [key]: value } as Partial<DuoweiConfig>)));
+        setting.addDropdown((dropdown) => dropdown.addOptions(options).setValue(String(config[key] ?? "")).onChange((value) => ctx.update({ [key]: value })));
       } else {
-        setting.addText((text) => text.setValue(String(config[key] ?? "")).setPlaceholder("字段名").onChange((value) => ctx.update({ [key]: value.trim() } as Partial<DuoweiConfig>)));
+        setting.addText((text) => text.setValue(String(config[key] ?? "")).setPlaceholder("字段名").onChange((value) => ctx.update({ [key]: value.trim() })));
       }
     };
 

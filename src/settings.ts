@@ -56,7 +56,7 @@ export function sanitizeWidget(raw: unknown): WidgetInstance | null {
     title: typeof value.title === "string" && value.title.trim() ? value.title.trim() : undefined,
     w: clamp(value.w, 1, MAX_COLUMNS),
     h: clamp(value.h, 1, MAX_ROWS),
-    config: value.config && typeof value.config === "object" ? (value.config as Record<string, unknown>) : {}
+    config: value.config && typeof value.config === "object" ? value.config : {}
   });
   if (typeof value.provider === "string" && value.provider.trim()) widget.provider = value.provider.trim();
   return widget;
@@ -222,10 +222,12 @@ export class HomePagesSettingTab extends PluginSettingTab {
       onChange: (value) => {
         settings.customWidgetsFolder = value.trim();
       },
-      onCommit: async (value) => {
+      onCommit: (value) => {
         settings.customWidgetsFolder = value.trim();
-        await this.plugin.saveSettings();
-        await this.plugin.customWidgetManager.loadAll();
+        void (async () => {
+          await this.plugin.saveSettings();
+          await this.plugin.customWidgetManager.loadAll();
+        })();
       }
     });
     new Setting(containerEl).setName("新组件自动加入首页")
@@ -306,7 +308,7 @@ export class HomePagesSettingTab extends PluginSettingTab {
         new ImportModal(this.app, async (text) => {
           try {
             const parsed = JSON.parse(text) as { pages?: unknown } | unknown[];
-            const rawPages = Array.isArray(parsed) ? parsed : Array.isArray((parsed as { pages?: unknown }).pages) ? ((parsed as { pages: unknown[] }).pages) : [parsed];
+            const rawPages = Array.isArray(parsed) ? parsed : Array.isArray(parsed.pages) ? ((parsed as { pages: unknown[] }).pages) : [parsed];
             const pages = rawPages
               .map((page, index) => sanitizePage(page, `导入页面 ${index + 1}`))
               .filter((page): page is HomePage => page !== null)

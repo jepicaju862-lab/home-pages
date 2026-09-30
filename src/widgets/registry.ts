@@ -18,8 +18,7 @@ import { statsWidget } from "./stats";
 import { wechatWidget } from "./wechat";
 import type { WidgetDefinition } from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyWidgetDefinition = WidgetDefinition<any>;
+type AnyWidgetDefinition = WidgetDefinition<Record<string, unknown>>;
 
 const DEFINITIONS: AnyWidgetDefinition[] = [
   heroWidget,

@@ -74,7 +74,7 @@ export const statsWidget: WidgetDefinition<StatsConfig> = {
       }
     };
     const grid = body.createDiv({ cls: "hp-stats" });
-    grid.style.gridTemplateColumns = `repeat(${config.columns}, minmax(0, 1fr))`;
+    grid.style.setProperty("--hp-cols", String(config.columns));
     config.tiles.forEach((tile, index) => {
       const item = grid.createDiv({ cls: `hp-stat hp-tone-${index % 4}` });
       item.createDiv({ cls: "hp-stat-value", text: values[tile]() });

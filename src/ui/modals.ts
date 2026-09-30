@@ -21,7 +21,7 @@ export class WidgetSettingsModal extends Modal {
   ) {
     super(app);
     this.draft = { ...widget, config: { ...widget.config } };
-    this.draftConfig = normalizeWidgetConfig(widget) as Record<string, unknown>;
+    this.draftConfig = normalizeWidgetConfig(widget);
   }
 
   onOpen(): void {

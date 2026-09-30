@@ -1,5 +1,5 @@
 import { App, Notice, Setting, TFile, setIcon } from "obsidian";
-import { formatRelativeTime, todayIso } from "../utils/date";
+import { formatRelativeTime } from "../utils/date";
 import { findCommandId, runCommand } from "../utils/plugins";
 import { addNumberSetting, addPathSetting, addSectionHeading, addTextareaSetting } from "../ui/settingHelpers";
 import { AnnotationsConfig, loadAnnotations } from "./annotations";
@@ -135,13 +135,6 @@ function parseTime(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   const parsed = Date.parse(String(value ?? ""));
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function dateKey(value: unknown): string {
-  const time = parseTime(value);
-  if (!time) return "";
-  const date = new Date(time);
-  return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
 }
 
 function cleanLink(value: string): string {

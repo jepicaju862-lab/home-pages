@@ -417,7 +417,7 @@ export class CustomWidgetManager {
 
   async deleteWidget(
     filePathOrKind: string,
-    options: { removeInstances?: boolean; useSystemTrash?: boolean } = {}
+    options: { removeInstances?: boolean } = {}
   ): Promise<boolean> {
     let filePath = filePathOrKind;
     let kind = "";
@@ -446,13 +446,7 @@ export class CustomWidgetManager {
     const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
     if (file instanceof TFile) {
       try {
-        if (typeof this.plugin.app.fileManager?.trashFile === "function") {
-          await this.plugin.app.fileManager.trashFile(file);
-        } else if (typeof this.plugin.app.vault.trash === "function") {
-          await this.plugin.app.vault.trash(file, options.useSystemTrash ?? true);
-        } else if (typeof (this.plugin.app.vault as { delete?: (f: TFile) => Promise<void> }).delete === "function") {
-          await (this.plugin.app.vault as { delete: (f: TFile) => Promise<void> }).delete(file);
-        }
+        await this.plugin.app.fileManager.trashFile(file);
       } catch (err) {
         console.error("Home Pages: 移动组件脚本至回收站失败", err);
       }
