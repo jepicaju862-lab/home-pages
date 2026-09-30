@@ -6,7 +6,7 @@
 A modern, modular, and responsive homepage dashboard plugin for Obsidian. Built on a flexible 12-column adaptive grid, it empowers you to customize your workspace with draggable, resizable, and individually configurable widgets. Support multiple pages and third-party plugin integrations.
 
 - **Website:** [peyote.info](https://peyote.info/)
-- **Current release:** [v0.2.0](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.2.0)
+- **Current release:** [v0.3.0](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.3.0)
 - **Minimum Obsidian version:** 1.7.2
 - **Supported platforms:** Desktop and Obsidian Mobile (iOS / Android)
 - **License:** [GNU General Public License v3.0](LICENSE)
@@ -24,13 +24,13 @@ Home Pages comes with 12+ built-in productivity widgets that can be freely combi
 
 | Widget | Description | Key Configurations |
 | :--- | :--- | :--- |
-| **Welcome Banner** | Greeting by time of day, custom nickname, live clock, weather forecast, vault stats, countdown badge, and customizable background image. | Weather provider (CMA Station / Open-Meteo / QWeather), city/district selection, background mask, field toggles, vault founding date, target date. |
+| **Welcome Banner** | Greeting by time of day, custom nickname, live clock (optional seconds), weather forecast, vault stats, countdown badge, and customizable background image. | Weather provider (CMA Station / Open-Meteo / QWeather), city/district selection, background mask, field toggles, vault founding date, target date. |
 | **Recent Notes** | Fast access to recently modified or newly created notes with folder paths. | Note count limit, include/exclude folders, sort order, display folder option. |
 | **Quick Access** | Pinned notes, folders, or attachments displayed as interactive icon tiles. | Note path autocomplete, display name, Lucide icon picker, custom order, column count. |
 | **Countdown & Anniversaries** | Accurate day count tracking remaining days to goals or elapsed days from anniversaries. | Target date, counting direction (past / future), description and subtitle. |
 | **Pomodoro Clock** | Focus, short break, and long break cycle timer with progress ring, task note, and daily/weekly completion statistics. Timers persist across note switches and restarts. | Stage durations, long break frequency, auto-start breaks, sound alerts, system notifications. |
 | **Daily Quote** | Display inspiring quotes from a dedicated note (one per line) or custom quote list. | Source note path, daily rotation vs. random, custom quote pool. |
-| **Habit Tracker** | Today's check-in checklist combined with a GitHub-style activity heatmap (week / month / year). | Habit items list, storage mode (local plugin data or Daily Note task block sync). |
+| **Habit Tracker** | Today's check-in checklist combined with a GitHub-style activity heatmap (week / month / year), plus the current streak. | Habit items list, storage mode (local plugin data or Daily Note task block sync). |
 | **Task Kanban** | Scans `- [ ]` markdown tasks and arranges them across Todo `[ ]`, Doing `[/]`, and Done `[x]` columns. Supports drag-and-drop status changes and inline task creation. | Source file or folder, default inbox file, column headers, hide completed toggle. |
 | **Vault Statistics** | Overview metrics including notes count, tags, word count, attachments, folders, vault age, created today, and modified this week. | Metric items toggle, grid column layout, exclude folders. |
 | **On This Day** | Surfaces notes created or written on this day across past years. | Item count limit, date property key, filename date fallback, ctime fallback. |
@@ -48,12 +48,12 @@ Home Pages comes with 12+ built-in productivity widgets that can be freely combi
 - **12-Column Adaptive Grid**: Automatically reflows and scales proportionately based on viewport width, providing a native visual layout on both desktop ultrawide monitors and mobile devices.
 - **WYSIWYG Layout Editing**:
   - Click **Edit Layout** in the header to enter arrangement mode.
-  - Drag and drop cards to reorder anywhere on the grid.
-  - Use card footer buttons to resize width (1–12 columns) and height (rows).
+  - Drag cards with a mouse, or drag their title/grip on touchscreens. Insertion markers support rows, columns, and gaps; dragging near the view edge scrolls automatically. Press Esc to cancel.
+  - Drag the corner handle to resize; width snaps to columns and height to rows, with a live size badge (height only on narrow screens, Esc cancels). Footer buttons and arrow keys on the focused handle step the size too. Edit mode shows 12 column guides.
   - Easily move forward, move backward, duplicate, or delete any widget.
 - **Multi-Page Management**:
-  - Click `+` on the tab bar to create distinct pages (e.g., "Work Dashboard", "Life Log", "Project Hub").
-  - Right-click tabs to rename, reorder, or delete pages.
+  - Click `+` at the end of the tab bar at any time to create distinct pages (e.g., "Work Dashboard", "Life Log", "Project Hub").
+  - Drag page tabs to reorder in edit mode. Right-click tabs to rename, move left/right, or delete pages.
 - **JSON Import & Export**: One-click copy and paste of complete dashboard layouts for easy backup and cross-vault migration.
 
 ---
@@ -86,6 +86,37 @@ api.ui.renderEmpty(containerEl, { message: "No data available" });
 ```
 
 > **Integration Example:** **Duowei Table (duowei-table-pro ≥ 1.4.0)** registers `duowei-view` via the Host API. Users can right-click any table view tab and select "Pin to Homepage" to display live calendars, kanban boards, and progress timelines on their homepage.
+
+---
+
+## 🧩 User-Defined Custom Widgets (Folder-based & Hot-Reload)
+
+Users can build custom widgets directly in JavaScript without creating separate plugins:
+
+1. In plugin settings, navigate to **"Custom Widgets"**.
+2. Set the **"Custom Widgets Folder"** (e.g. `_scripts/home-pages/`), or click **"📄 Create Demo Widget Template"** to auto-generate `demo-widget.js`.
+3. Create or edit `.js` files exporting a standard widget definition:
+   ```javascript
+   module.exports = {
+     kind: "user-clock",
+     name: "Custom Clock",
+     description: "Real-time clock widget",
+     icon: "clock",
+     accent: "#6366f1",
+     defaultSize: { w: 4, h: 3 },
+     defaultConfig: () => ({ greeting: "Hello" }),
+     render(body, ctx) {
+       body.empty();
+       const el = body.createDiv();
+       el.setText(`${ctx.config.greeting} · ${new Date().toLocaleTimeString()}`);
+       ctx.registerInterval(() => {
+         el.setText(`${ctx.config.greeting} · ${new Date().toLocaleTimeString()}`);
+       }, 1000);
+     }
+   };
+   ```
+4. **Save and it appears**: The first time a new script loads, its widget is added to the current page (once per widget; editing a script after you removed its card does not add it back; turn off with **Add new custom widgets automatically**).
+5. **Live Hot-Reload**: Save modifications to your `.js` file from Obsidian or an external editor like VS Code, and homepage cards will **automatically reload and re-render instantly**!
 
 ---
 
@@ -135,10 +166,11 @@ Once available in the official Obsidian Community Plugins directory:
 | :--- | :--- | :--- |
 | **Open on startup** | Automatically open homepage when Obsidian launches | On |
 | **Open in new tab** | Open homepage in a new tab instead of replacing active tab | On |
-| **Row height** | Unit height for grid rows in pixels (24px - 96px) | 36px |
-| **Grid gap** | Spacing between widget cards in pixels (4px - 40px) | 12px |
-| **Max content width** | Max width constraint (0 fills window width) | 0 |
-| **Always show page tabs** | Keep page tabs visible even with single page | Off |
+| **Row height** | Unit height for grid rows in pixels (24px - 96px) | 40px |
+| **Grid gap** | Spacing between widget cards in pixels (4px - 40px) | 16px |
+| **Max content width** | Max width constraint (0 fills window width) | 1400px |
+| **Always show page tabs** | Keep page tabs visible even with single page | On (new installs) |
+| **Add new custom widgets automatically** | Put a custom widget on the current page the first time its script loads | On |
 | **Page management** | Add, duplicate, rename, or remove homepage layouts | Default page |
 | **Import / Export** | Copy or paste full dashboard layouts in JSON format | - |
 
@@ -214,4 +246,3 @@ For detailed changelogs and version release histories, see [RELEASE_NOTES.md](RE
 ## 📄 License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
-

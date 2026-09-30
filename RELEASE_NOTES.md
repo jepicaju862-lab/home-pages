@@ -1,3 +1,36 @@
+# Home Pages v0.3.0 Release Notes
+
+- Release date: September 30, 2026
+- Minimum Obsidian version: 1.7.2
+- Supported platforms: Desktop and Obsidian Mobile (iOS / Android)
+- License: GNU General Public License v3.0
+
+---
+
+## 🌟 New
+
+### 🧩 User custom widgets
+- Point **Custom widgets folder** at a vault folder and write widgets in plain JavaScript (`module.exports = { kind, name, render }`). Generate a sample template, or paste code straight from the homepage.
+- **Hot reload**: save a `.js` file in Obsidian or an external editor and its cards reload immediately.
+- **Save and it appears**: the first time a new script loads, its widget is added to the current page. This happens once per widget; editing a script after you removed its card does not add it back. Turn off with **Add new custom widgets automatically**.
+
+### 📐 Layout editing rebuilt
+- **Reordering uses pointer events**: works with mouse, touch and pen; drop markers for left/right, above/below and gaps; auto-scroll at the view edge; Esc or dropping outside the grid cancels. Fixes cards jumping to the end when dropped in a gap and order drifting from dense backfilling.
+- **Drag page tabs to reorder** in edit mode; a tap still switches pages.
+- **Corner resize handle**: width snaps to columns and height to rows with a live "N 列 × M 行" badge; height only on narrow screens; Esc cancels; arrow keys step the size when the handle is focused.
+- **12 column guides** show in the grid while editing and get stronger while resizing.
+- **Smoother dragging**: a copy of the card follows the pointer every frame while the original stays as a dashed placeholder; on drop the card glides from the preview into its slot (or back, when cancelled). While resizing, a dashed frame tracks the pointer pixel by pixel and neighbouring cards slide aside. Move and size buttons animate too. No animation when the OS asks for reduced motion. Markers only touch the DOM when the drop position changes, so pointer moves no longer force a layout.
+
+### ✨ Details
+- The `+` new-page button at the end of the tab bar is available outside edit mode; new installs show the tab bar by default (existing settings are unchanged).
+- Welcome banner clock can show seconds.
+- Habit tracker shows the current streak (not checking in yet today does not break it).
+
+### 📝 Docs
+- README default-settings table now matches the real defaults (row height 40px, gap 16px, max width 1400px).
+
+---
+
 # Home Pages v0.2.0 Release Notes
 
 - Release date: September 18, 2026
