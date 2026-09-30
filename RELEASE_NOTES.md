@@ -1,3 +1,20 @@
+# Home Pages v0.3.1 Release Notes
+
+- Release date: September 30, 2026
+- Minimum Obsidian version: 1.7.2
+
+## 🔧 Maintenance
+
+Fixes for the Obsidian community plugin automated review. No feature changes.
+
+- Removed the `no-explicit-any` lint suppression and several unsafe `any` usages and redundant type assertions.
+- Deleting a custom widget script now always goes through `FileManager.trashFile`, respecting your file deletion preference.
+- Replaced the `builtin-modules` dev dependency with Node's `node:module`.
+- Removed unused helpers.
+- Styles: card size and grid column counts are driven by CSS variables instead of inline styles, so responsive rules no longer need `!important`.
+
+---
+
 # Home Pages v0.3.0 Release Notes
 
 - Release date: September 30, 2026

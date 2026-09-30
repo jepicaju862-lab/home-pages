@@ -6,7 +6,7 @@
 一款专为 Obsidian 打造的现代化、模块化响应式首页看板插件。基于 12 列自适应网格，支持组件自由增删、拖拽排序、平滑缩放与独立配置；支持多页面管理与第三方插件扩展。
 
 - **官方网站：** [peyote.info](https://peyote.info/)
-- **当前版本：** [v0.3.0](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.3.0)
+- **当前版本：** [v0.3.1](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.3.1)
 - **最低 Obsidian 版本：** 1.7.2
 - **支持平台：** 桌面端与移动端（iOS / Android）
 - **开源协议：** [GNU 通用公共许可证 v3.0](LICENSE)

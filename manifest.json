@@ -1,7 +1,7 @@
 {
 	"id": "home-pages",
 	"name": "Home Pages",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"minAppVersion": "1.7.2",
 	"description": "Customizable homepage dashboard with greeting banners, recent notes, quick access, countdowns, pomodoro timer, daily quotes, habits, task kanban, and vault statistics.",
 	"author": "and",

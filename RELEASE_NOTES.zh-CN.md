@@ -1,3 +1,20 @@
+# Home Pages v0.3.1 发布说明
+
+- 发布日期：2026 年 9 月 30 日
+- 最低 Obsidian 版本：1.7.2
+
+## 🔧 维护
+
+针对 Obsidian 社区插件自动审核的修复，无功能变化。
+
+- 移除 `no-explicit-any` 的 lint 屏蔽，清理不安全的 `any` 用法与多余的类型断言。
+- 删除自定义组件脚本时统一使用 `FileManager.trashFile`，遵循你的文件删除偏好。
+- 用 Node 自带的 `node:module` 替换 `builtin-modules` 开发依赖。
+- 删除未使用的函数。
+- 样式：卡片尺寸和网格列数改由 CSS 变量驱动，不再依赖内联样式，响应式规则无需 `!important`。
+
+---
+
 # Home Pages v0.3.0 发布说明
 
 - 发布日期：2026-09-30

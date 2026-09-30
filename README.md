@@ -6,7 +6,7 @@
 A modern, modular, and responsive homepage dashboard plugin for Obsidian. Built on a flexible 12-column adaptive grid, it empowers you to customize your workspace with draggable, resizable, and individually configurable widgets. Support multiple pages and third-party plugin integrations.
 
 - **Website:** [peyote.info](https://peyote.info/)
-- **Current release:** [v0.3.0](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.3.0)
+- **Current release:** [v0.3.1](https://github.com/jepicaju862-lab/home-pages/releases/tag/v0.3.1)
 - **Minimum Obsidian version:** 1.7.2
 - **Supported platforms:** Desktop and Obsidian Mobile (iOS / Android)
 - **License:** [GNU General Public License v3.0](LICENSE)
