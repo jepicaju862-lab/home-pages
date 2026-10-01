@@ -36,46 +36,106 @@
 
 /* ---- 页面标签 / 编辑工具栏 ------------------------------------------------ */
 
-.hp-tabs {
+/* 页面切换器：默认嵌进视图标题栏，取代与页面名重复的标题，不占内容区高度；
+   标题栏被隐藏时退回到页面顶部一行。只用文字 + 当前页的淡色底，不画轨道和边框。
+   选择器以 .hp-tabs-host 开头（拖动预览也挂在它下面），以压过 Obsidian 的 button 默认样式。 */
+.hp-tabs-host {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.hp-tabs.is-hidden,
+.hp-tabs-host.is-hidden,
 .hp-toolbar.is-hidden {
   display: none;
 }
 
-.hp-tab {
-  padding: 5px 14px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--hp-muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: none;
+.hp-tabs-host:not(.is-in-header) {
+  margin: -6px 0 10px -6px;
 }
 
-.hp-tab:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* 标题栏里：藏掉原标题与面包屑，只留切换器。 */
+.view-header-title-container.hp-has-switcher > :not(.hp-tabs-host) {
+  display: none;
 }
 
-.hp-tab.is-active {
-  background: var(--hp-card-bg);
-  border-color: var(--hp-border);
-  color: var(--text-normal);
-  box-shadow: var(--hp-shadow);
+.view-header-title-container.hp-has-switcher::after {
+  content: none;
 }
 
-.hp-tab-add {
+.hp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hp-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.hp-tabs-host .hp-tab {
+  flex: none;
   display: inline-flex;
   align-items: center;
-  padding: 5px 9px;
+  justify-content: center;
+  height: 26px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-s, 6px);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small, 13px);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.hp-tabs-host .hp-tab:hover {
+  background: color-mix(in srgb, var(--text-normal) 5%, transparent);
+  box-shadow: none;
+  color: var(--text-normal);
+}
+
+.hp-tabs-host .hp-tab:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.hp-tabs-host .hp-tab.is-active {
+  background: color-mix(in srgb, var(--text-normal) 8%, transparent);
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.hp-tabs-host .hp-tab.hp-sort-ghost {
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+/* 「新建页面」平时隐身，指针移到切换器上（或编辑模式、触屏）才出现。 */
+.hp-tabs-host .hp-tab-add {
+  width: 26px;
+  padding: 0;
+  color: var(--text-faint);
+  opacity: 0;
+}
+
+.hp-tabs:hover .hp-tab-add,
+.hp-tabs.is-editing .hp-tab-add,
+.hp-tabs-host .hp-tab-add:focus-visible {
+  opacity: 1;
 }
 
 .hp-tab-add svg {
@@ -357,7 +417,7 @@
 }
 
 .hp-root.is-editing .hp-card-header,
-.hp-root.is-editing .hp-tab[data-id] {
+.hp-tabs.is-editing .hp-tab[data-id] {
   touch-action: none;
   user-select: none;
   cursor: grab;
@@ -465,16 +525,18 @@
   bottom: 2px;
 }
 
-.hp-tab {
+.hp-tab:not(.hp-sort-ghost) {
   position: relative;
 }
 
 .hp-tab.drop-before::before {
-  left: 0;
+  left: -2px;
+  width: 2px;
 }
 
 .hp-tab.drop-after::after {
-  right: 0;
+  right: -2px;
+  width: 2px;
 }
 
 .hp-card-editbar {
@@ -4033,31 +4095,20 @@
   --hp-gap: 14px;
 }
 
-/* 平板端水平平滑滚动标签栏，防止页面过多时换行拥挤 */
-.is-tablet .hp-tabs,
-.is-mobile .hp-tabs,
-.is-touch-device .hp-tabs {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: 4px;
+/* 平板端：页面切换器放大触控目标；没有 hover，「新建页面」常显 */
+.is-tablet .hp-tabs-host .hp-tab,
+.is-mobile .hp-tabs-host .hp-tab,
+.is-touch-device .hp-tabs-host .hp-tab {
+  height: 30px;
+  padding: 0 12px;
 }
 
-.is-tablet .hp-tabs::-webkit-scrollbar,
-.is-mobile .hp-tabs::-webkit-scrollbar,
-.is-touch-device .hp-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.is-tablet .hp-tab,
-.is-mobile .hp-tab,
-.is-touch-device .hp-tab {
-  padding: 6px 15px;
-  font-size: 13px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  min-height: 32px;
+.is-tablet .hp-tabs-host .hp-tab-add,
+.is-mobile .hp-tabs-host .hp-tab-add,
+.is-touch-device .hp-tabs-host .hp-tab-add {
+  width: 30px;
+  padding: 0;
+  opacity: 1;
 }
 
 .is-tablet .hp-tab:active,
