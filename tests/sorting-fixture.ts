@@ -20,6 +20,7 @@ Object.assign(HTMLElement.prototype, {
   addClass(this: HTMLElement, ...names: string[]) { this.classList.add(...names); },
   removeClass(this: HTMLElement, ...names: string[]) { this.classList.remove(...names); },
   toggleClass(this: HTMLElement, name: string, enabled: boolean) { this.classList.toggle(name, enabled); },
+  hasClass(this: HTMLElement, name: string) { return this.classList.contains(name); },
   setText(this: HTMLElement, value: string) { this.textContent = value; }
 });
 Object.assign(globalThis, { createDiv: (options: DomElementInfo) => createElement("div", options) });
@@ -46,13 +47,15 @@ async function reset(options: { editing?: boolean; widths?: number[]; count?: nu
     alwaysShowPageTabs: true, openOnStartup: false, openInNewTab: true, customWidgetsFolder: "" };
   const contentEl = document.body.appendChild(createElement("div"));
   contentEl.style.height = "550px";
-  const app = { vault: { on: () => ({}) }, metadataCache: { on: () => ({}) } };
+  const app = { vault: { on: () => ({}) }, metadataCache: { on: () => ({}) }, workspace: { on: () => ({}) } };
   const plugin = {
     settings, getActivePage: () => pages.find((page) => page.id === settings.activePageId)!,
     saveSettings: async () => { await new Promise((resolve) => setTimeout(resolve, 200)); savedForSession.push(plugin.getActivePage().widgets.map((item) => item.id)); },
     openSettings: () => undefined
   };
   view = new HomeView({ app, contentEl, updateHeader: () => undefined } as unknown as WorkspaceLeaf, plugin as unknown as HomePagesPlugin);
+  // No view header in the fixture: the page switcher stays at the top of the page.
+  (view as unknown as { containerEl: HTMLElement }).containerEl = contentEl;
   await view.onOpen();
   if (options.editing !== false) view.toggleEditing(true);
 }
