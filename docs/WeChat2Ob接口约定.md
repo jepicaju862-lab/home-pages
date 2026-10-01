@@ -77,3 +77,24 @@ function createApi(plugin: WeChat2Ob): Wechat2obApiV1 {
   };
 }
 ```
+
+## 与 Momento（拾光）联动
+
+装有带插件 API 的 Momento 时，「微信收件」组件（仅 WeChat2Ob 来源）会：
+
+- 对已收进拾光的消息显示「✨ 已收录」，点击打开对应的拾光记录；
+- 在其余消息上悬停显示 ✨「存为拾光」：调用 `momento.api.wechat.keep(key, { notify: true })`，同一会话里连着发的消息（例如几张照片加一句话）会一起收下，并由 Momento 给出“查看 / 撤销”提示；
+- 收到 `momento:ready` / `momento:changed` 时重绘。
+
+用到的接口（Momento 侧定义见其 `momento-api.ts`）：
+
+```ts
+interface MomentoApiLike {
+  version: 1;
+  findBySource(plugin: "wechat2ob", keys: string[]): Record<string, string>;  // 消息 key → 记录 id
+  open(id: string): Promise<void>;
+  wechat: { available(): boolean; keep(key: string, options?: { notify?: boolean }): Promise<string | null> };
+}
+```
+
+Momento 自己通过宿主 API 注册「今日拾光」「那年今日」「随机回忆」三个组件。「今日拾光」没有待收内容时调用 `ctx.setHidden(true)` 隐藏整张卡片（编辑布局时仍显示），这是本版新增的组件上下文方法；旧版首页没有该方法时，卡片显示一句空状态提示。

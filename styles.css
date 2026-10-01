@@ -380,6 +380,15 @@
   filter: saturate(0.7);
 }
 
+/* 组件通过 ctx.setHidden 暂时隐藏（例如“今日拾光”没有待收内容时）；编辑布局时仍显示，便于调整位置。 */
+.hp-root:not(.is-editing) .hp-card.is-auto-hidden {
+  display: none;
+}
+
+.hp-root.is-editing .hp-card.is-auto-hidden {
+  border-style: dashed;
+}
+
 .hp-root.is-editing .hp-card-gear {
   display: none;
 }
@@ -3075,6 +3084,47 @@
 
 .is-mobile .hp-wechat-done {
   opacity: 1;
+}
+
+/* 拾光：悬停出现“存为拾光”，已收录的显示小标记 */
+.hp-wechat-keep {
+  flex: none;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--hp-muted);
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.hp-wechat-item:hover .hp-wechat-keep,
+.hp-wechat-keep:focus-visible,
+.is-mobile .hp-wechat-keep {
+  opacity: 1;
+}
+
+.hp-wechat-keep:hover {
+  color: #14b8a6;
+}
+
+.hp-wechat-kept {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: var(--font-ui-smaller);
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.12);
+}
+
+.hp-wechat-kept svg {
+  width: 12px;
+  height: 12px;
 }
 /* ---- 批注与复习：面板切换 + 题库复习 ------------------------------------------ */
 

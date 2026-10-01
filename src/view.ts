@@ -40,6 +40,7 @@ class WidgetHost {
     this.bodyEl = body;
     this.subtitleEl.setText("");
     this.actionsEl.empty();
+    this.cardEl.removeClass("is-auto-hidden");
 
     const definition = getWidgetDefinition(this.widget.kind);
     if (!definition) {
@@ -86,7 +87,10 @@ class WidgetHost {
       },
       registerCleanup: (callback) => this.cleanups.push(callback),
       isAlive: () => token === this.token && body.isConnected,
-      isEditing: () => view.isEditing()
+      isEditing: () => view.isEditing(),
+      setHidden: (hidden) => {
+        if (token === this.token) this.cardEl.toggleClass("is-auto-hidden", hidden);
+      }
     };
     try {
       await definition.render(body, ctx);

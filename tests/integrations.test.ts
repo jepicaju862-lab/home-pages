@@ -3,7 +3,7 @@ import path from "node:path";
 import { formatValue, selectRecords, type DuoweiDoc } from "../src/widgets/duoweiCore";
 import { loadAnnotations } from "../src/widgets/annotations";
 import { buildDigest } from "../src/widgets/duoweiDigest";
-import { loadWechat, syncWechat2obViaApi, wechat2obApi, type Wechat2obInboxV1 } from "../src/widgets/wechat";
+import { loadWechat, momentoApi, syncWechat2obViaApi, wechat2obApi, type Wechat2obInboxV1 } from "../src/widgets/wechat";
 import { TFile, TFolder } from "obsidian";
 import { createWidgetInstance, getWidgetDefinition, listWidgetDefinitions, onRegistryChange, registerWidget } from "../src/widgets/registry";
 import { sanitizeSettings, sanitizeWidget } from "../src/settings";
@@ -304,6 +304,18 @@ async function testWechat2obApi(): Promise<void> {
   check("sync via api handled", (await syncWechat2obViaApi(withApi as any, "wechat2ob")) && syncs === 1, syncs);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   check("sync without api defers to command", !(await syncWechat2obViaApi(app as any, "wechat2ob")));
+
+  // 拾光：只认 version 1 且具备所需方法的 Momento api。
+  const momento = { version: 1, findBySource: () => ({}), open: async () => undefined, wechat: { available: () => true, keep: async () => "e1" } };
+  const withMomento = (api: unknown) => ({ ...(app as object), plugins: { plugins: { momento: { api } } } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("momento api detected", momentoApi(withMomento(momento) as any) !== null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("momento api with unknown version ignored", momentoApi(withMomento({ ...momento, version: 2 }) as any) === null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("momento api without wechat.keep ignored", momentoApi(withMomento({ ...momento, wechat: {} }) as any) === null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("no momento → no keep buttons", momentoApi(app as any) === null);
 }
 
 async function testAnnotations(): Promise<void> {

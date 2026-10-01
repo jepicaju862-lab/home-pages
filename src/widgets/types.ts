@@ -29,6 +29,8 @@ export interface WidgetContext<C> {
   isAlive(): boolean;
   /** 是否处于布局编辑模式。 */
   isEditing(): boolean;
+  /** 暂时隐藏整张卡片（没有内容可显示时）；编辑布局时仍会显示，便于调整。每次重绘前自动恢复显示。 */
+  setHidden(hidden: boolean): void;
 }
 
 /** 组件配置面板的上下文：操作的是草稿，点“保存”后才写回。 */

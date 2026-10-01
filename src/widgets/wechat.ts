@@ -378,6 +378,24 @@ export async function openWechat2obInboxViaApi(app: App, pluginId: string): Prom
   return true;
 }
 
+// ---- Momento（拾光）：一键存为拾光 / 已收录 ---------------------------------
+
+/** Momento 公开 api（version 1）中本组件用到的部分。 */
+interface MomentoApiLike {
+  version: 1;
+  findBySource(plugin: string, keys: string[]): Record<string, string>;
+  open(id: string): Promise<void>;
+  wechat: { available(): boolean; keep(key: string, options?: { notify?: boolean }): Promise<string | null> };
+}
+
+export function momentoApi(app: App): MomentoApiLike | null {
+  const plugins = (app as App & { plugins?: { plugins?: Record<string, { api?: unknown }> } }).plugins?.plugins;
+  const api = plugins?.momento?.api as Partial<MomentoApiLike> | undefined;
+  return api && api.version === 1 && typeof api.findBySource === "function" && typeof api.open === "function" && typeof api.wechat?.keep === "function"
+    ? (api as MomentoApiLike)
+    : null;
+}
+
 // ---- WeChat2Ob 同步日志（回退） ---------------------------------------------
 
 interface Journal {
@@ -678,6 +696,9 @@ export const wechatWidget: WidgetDefinition<WechatConfig> = {
       return;
     }
     const canMark = Boolean(api && api.canEdit() && data.duowei?.doneOptionId);
+    // 拾光：WeChat2Ob 的消息 key 与 Momento 记录来源一致，可标出已收录并一键收下。
+    const momento = data.source === "wechat2ob" ? momentoApi(app) : null;
+    const kept = momento ? momento.findBySource("wechat2ob", data.items.map((item) => item.key)) : {};
     for (const item of data.items) {
       const meta = KIND_META[item.kind] ?? KIND_META.unknown;
       const row = list.createDiv({ cls: `hp-wechat-item is-clickable${item.pending === false && data.source === "duowei" ? " is-done" : ""}`, attr: { title: item.notePath ?? item.status ?? "" } });
@@ -696,6 +717,26 @@ export const wechatWidget: WidgetDefinition<WechatConfig> = {
       if (item.status) line.createSpan({ cls: `hp-wechat-status${item.pending ? " is-pending" : ""}`, text: item.status });
       if (item.notePath) line.createSpan({ cls: "hp-wechat-note", text: item.notePath.replace(/\.md$/i, "").split("/").pop() ?? "" });
       line.createSpan({ cls: "hp-wechat-time", text: formatRelativeTime(item.receivedAt) });
+      if (momento && kept[item.key]) {
+        const badge = row.createEl("button", { cls: "hp-wechat-kept clickable-icon", attr: { type: "button", "aria-label": "已存为拾光，点击查看", title: "已存为拾光，点击查看" } });
+        setIcon(badge.createSpan(), "sparkles");
+        badge.createSpan({ text: "已收录" });
+        badge.addEventListener("click", (event) => {
+          event.stopPropagation();
+          void momento.open(kept[item.key]);
+        });
+      } else if (momento) {
+        const keep = row.createEl("button", { cls: "hp-wechat-keep clickable-icon", attr: { type: "button", "aria-label": "存为拾光", title: "存为拾光（同一会话连发的消息会一起收下）" } });
+        setIcon(keep, "sparkles");
+        keep.addEventListener("click", (event) => {
+          event.stopPropagation();
+          keep.disabled = true;
+          momento.wechat.keep(item.key, { notify: true }).catch((error: unknown) => {
+            keep.disabled = false;
+            new Notice(error instanceof Error ? error.message : "存为拾光失败", 4000);
+          });
+        });
+      }
       if (canMark && item.pending) {
         const done = row.createEl("button", { cls: "hp-wechat-done clickable-icon", attr: { type: "button", "aria-label": "标记为已整理", title: "标记为已整理" } });
         setIcon(done, "check");
