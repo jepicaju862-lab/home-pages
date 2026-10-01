@@ -3,7 +3,7 @@ import path from "node:path";
 import { formatValue, selectRecords, type DuoweiDoc } from "../src/widgets/duoweiCore";
 import { loadAnnotations } from "../src/widgets/annotations";
 import { buildDigest } from "../src/widgets/duoweiDigest";
-import { loadWechat } from "../src/widgets/wechat";
+import { loadWechat, syncWechat2obViaApi, wechat2obApi, type Wechat2obInboxV1 } from "../src/widgets/wechat";
 import { TFile, TFolder } from "obsidian";
 import { createWidgetInstance, getWidgetDefinition, listWidgetDefinitions, onRegistryChange, registerWidget } from "../src/widgets/registry";
 import { sanitizeSettings, sanitizeWidget } from "../src/settings";
@@ -237,6 +237,73 @@ async function testWechat(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const missing = await loadWechat(app as any, { ...config, pluginId: "nope-plugin" });
   check("missing plugin → not ready", !missing.ready);
+}
+
+/** WeChat2Ob 公开 api 优先：不依赖测试库，用空目录 + 内存里的插件 api。 */
+async function testWechat2obApi(): Promise<void> {
+  const root = path.resolve("tests/.out/wechat-api-fixture");
+  await fs.mkdir(root, { recursive: true });
+  const { app } = await fakeApp(root);
+  const config = { source: "wechat2ob" as const, duoweiPluginId: "duowei-table-pro", duoweiTablePath: "", pluginId: "wechat2ob", stateFolder: "", showStats: true, showThumbs: true, days: 14, limit: 2, kinds: [], pendingOnly: false };
+  const now = Date.now();
+  const inbox: Wechat2obInboxV1 = {
+    messages: [
+      { key: "k-old", kind: "text", title: "", content: "  早上\n好  ", transcript: "", receivedAt: new Date(now - 3600000).toISOString(), notePath: "日记/今天.md", attachments: [] },
+      { key: "k-voice", kind: "voice", title: "", content: "", transcript: "下午三点开会", receivedAt: new Date(now - 60000).toISOString(), attachments: [{ path: "WeChat2Ob/附件/a.m4a", kind: "voice", mimeType: "audio/mp4" }] },
+      { key: "k-image", kind: "image", title: "", content: "", transcript: "", receivedAt: new Date(now - 120000).toISOString(), attachments: [{ path: "WeChat2Ob/附件/b.png", kind: "image", mimeType: "image/png" }] },
+      { key: "k-bad", kind: "text", title: "", content: "坏时间", transcript: "", receivedAt: "not-a-date", attachments: [] }
+    ],
+    today: 5, week: 9, attachments: 2, pending: 1, todayNotePath: "日记/今天.md", tablePath: "WeChat2Ob/微信收件箱.duowei", inboxRoot: "WeChat2Ob"
+  };
+  const queries: unknown[] = [];
+  let syncs = 0;
+  let mode: "ok" | "malformed" | "throw" = "ok";
+  const api = {
+    version: 1 as const,
+    query: async (options: unknown) => {
+      queries.push(options);
+      if (mode === "throw") throw new Error("boom");
+      return mode === "malformed" ? ({ messages: [] } as unknown as Wechat2obInboxV1) : inbox;
+    },
+    sync: async () => {
+      syncs += 1;
+    },
+    openInbox: () => undefined
+  };
+  const withApi = { ...(app as object), plugins: { plugins: { wechat2ob: { api } } } };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const viaApi = await loadWechat(withApi as any, config);
+  check("wechat2ob api preferred", viaApi.ready && viaApi.via === "api", [viaApi.ready, viaApi.via]);
+  check("api query receives widget filters", JSON.stringify(queries[0]) === JSON.stringify({ days: 14, limit: 2, kinds: [] }), queries[0]);
+  check("api stats passed through", viaApi.today === 5 && viaApi.week === 9 && viaApi.attachments === 2 && viaApi.pending === 1, viaApi);
+  check("api items sorted, invalid dropped, limit applied", viaApi.items.map((item) => item.key).join() === "k-voice,k-image", viaApi.items.map((item) => item.key));
+  check("api voice summarized from transcript", viaApi.items[0]?.text === "下午三点开会", viaApi.items[0]);
+  check("api image thumbnail detected", viaApi.items[1]?.image === "WeChat2Ob/附件/b.png", viaApi.items[1]);
+  check("api paths passed through", viaApi.todayNotePath === "日记/今天.md" && viaApi.tablePath === "WeChat2Ob/微信收件箱.duowei");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const all = await loadWechat(withApi as any, { ...config, limit: 10 });
+  check("api text whitespace normalized", all.items.find((item) => item.key === "k-old")?.text === "早上 好", all.items.map((item) => item.text));
+
+  mode = "malformed";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const malformed = await loadWechat(withApi as any, config);
+  check("malformed api result falls back to journals", malformed.via === "journal" && !malformed.ready, [malformed.via, malformed.ready]);
+  mode = "throw";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const thrown = await loadWechat(withApi as any, config);
+  check("throwing api falls back to journals", thrown.via === "journal", thrown.via);
+
+  const future = { ...(app as object), plugins: { plugins: { wechat2ob: { api: { ...api, version: 2 } } } } };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("unknown api version ignored", wechat2obApi(future as any, "wechat2ob") === null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const noApi = await loadWechat(app as any, config);
+  check("no api → journal fallback", noApi.via === "journal" && !noApi.ready, [noApi.via, noApi.ready]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("sync via api handled", (await syncWechat2obViaApi(withApi as any, "wechat2ob")) && syncs === 1, syncs);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("sync without api defers to command", !(await syncWechat2obViaApi(app as any, "wechat2ob")));
 }
 
 async function testAnnotations(): Promise<void> {
@@ -764,6 +831,7 @@ testWeatherHelpers();
 testMedia();
 await testOpmlAndFollow();
 await testMediaCachingAndProgress();
+await testWechat2obApi();
 await testDuowei();
 await testDigest();
 await testWechat();

@@ -4,7 +4,7 @@ import { findCommandId, runCommand } from "../utils/plugins";
 import { addNumberSetting, addPathSetting, addSectionHeading, addTextareaSetting } from "../ui/settingHelpers";
 import { AnnotationsConfig, loadAnnotations } from "./annotations";
 import { SECTION_META, buildDigest, type DigestSection } from "./duoweiDigest";
-import { loadWechat } from "./wechat";
+import { loadWechat, openWechat2obInboxViaApi, syncWechat2obViaApi } from "./wechat";
 import { WidgetContext, WidgetDefinition, clampInt, normalizeWith, toStringList } from "./types";
 
 type SourceKey = "all" | "duowei" | "annotations" | "wechat";
@@ -179,7 +179,7 @@ async function loadDigestInsights(ctx: WidgetContext<InsightsConfig>): Promise<S
   return { ready: true, total, items };
 }
 
-/** 优先读 WeChat2Ob 的同步日志（不依赖是否开启表格输出）；没有日志时回退到收件箱表格。 */
+/** 优先取 WeChat2Ob 的 api / 同步日志（不依赖是否开启表格输出）；都没有时回退到收件箱表格。 */
 async function loadWechatJournalInsights(ctx: WidgetContext<InsightsConfig>): Promise<SourceResult | null> {
   const data = await loadWechat(ctx.app, { source: "auto", duoweiPluginId: "duowei-table-pro", duoweiTablePath: "", pluginId: "wechat2ob", stateFolder: "", showStats: false, showThumbs: false, days: 14, limit: 50, kinds: [], pendingOnly: false });
   if (!data.ready) return null;
@@ -195,7 +195,7 @@ async function loadWechatJournalInsights(ctx: WidgetContext<InsightsConfig>): Pr
     open: (event) => {
       if (item.notePath) void ctx.openPath(item.notePath, { event });
       else if (item.attachments[0]) void ctx.openPath(item.attachments[0].path, { event });
-      else runWechatCommand(ctx, "open-inbox");
+      else void runWechatCommand(ctx, "open-inbox");
     }
   }));
   return { ready: true, total: data.pending ?? data.week, items };
@@ -290,7 +290,13 @@ function loadWechatInsights(ctx: WidgetContext<InsightsConfig>, doc: DuoweiDoc |
   return { ready: true, total: items.length, items };
 }
 
-function runWechatCommand(ctx: WidgetContext<InsightsConfig>, command: "sync" | "open-inbox"): void {
+/** 优先走 WeChat2Ob 的 api，插件没有 api 时退回执行命令。 */
+async function runWechatCommand(ctx: WidgetContext<InsightsConfig>, command: "sync" | "open-inbox"): Promise<void> {
+  const handled = command === "sync" ? await syncWechat2obViaApi(ctx.app, "wechat2ob") : await openWechat2obInboxViaApi(ctx.app, "wechat2ob");
+  if (handled) {
+    if (command === "sync" && ctx.isAlive()) ctx.rerender();
+    return;
+  }
   if (runCommand(ctx.app, "wechat2ob:" + command)) return;
   const names = command === "sync" ? ["立即同步微信消息", "同步微信"] : ["打开收件箱", "open inbox"];
   const id = findCommandId(ctx.app, { pluginId: "wechat2ob", nameIncludes: names });
@@ -358,7 +364,7 @@ export const insightsWidget: WidgetDefinition<InsightsConfig> = {
     all.addEventListener("click", () => void ctx.saveConfig({ source: "all" }).then(() => ctx.rerender()));
     if (config.showWechat) {
       const sync = toolbar.createEl("button", { cls: "hp-pill", text: "同步微信", attr: { type: "button" } });
-      sync.addEventListener("click", () => runWechatCommand(ctx, "sync"));
+      sync.addEventListener("click", () => void runWechatCommand(ctx, "sync"));
     }
     if (config.showAnnotations) {
       const center = toolbar.createEl("button", { cls: "hp-pill", text: "批注中心", attr: { type: "button" } });
