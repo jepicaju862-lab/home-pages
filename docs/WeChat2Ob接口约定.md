@@ -22,6 +22,8 @@ this.app.workspace.trigger("wechat2ob:synced");
 
 Home Pages 收到 `wechat2ob:ready` / `wechat2ob:synced` 即重绘相关组件；走 api 时不再每 3 分钟轮询。
 
+收件状态在同步之外变化时（例如 `setProcessed` 把消息标为已整理），WeChat2Ob 触发 `wechat2ob:changed`，Home Pages 同样重绘，「待整理」数即时更新。
+
 ## 接口（version 1）
 
 ```ts
@@ -85,6 +87,7 @@ function createApi(plugin: WeChat2Ob): Wechat2obApiV1 {
 - 对已收进拾光的消息显示「✨ 已收录」，点击打开对应的拾光记录；
 - 在其余消息上悬停显示 ✨「存为拾光」：调用 `momento.api.wechat.keep(key, { notify: true })`，同一会话里连着发的消息（例如几张照片加一句话）会一起收下，并由 Momento 给出“查看 / 撤销”提示；
 - 收到 `momento:ready` / `momento:changed` 时重绘。
+- 在拾光里收下的消息，Momento 会调用 WeChat2Ob 的 `setProcessed(keys, true)` 把收件箱表格里对应的行标为「已整理」（撤销或删除记录时改回「待整理」），首页的「待整理」数因此与拾光保持一致。
 
 用到的接口（Momento 侧定义见其 `momento-api.ts`）：
 

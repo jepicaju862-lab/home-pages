@@ -87,7 +87,8 @@ export default class HomePagesPlugin extends Plugin {
     // WeChat2Ob 的 api 就绪 / 同步写完：重绘读微信消息的组件（不再依赖定时轮询它的私有日志）。
     const workspace = this.app.workspace as unknown as { on(name: string, callback: () => void): EventRef };
     // Momento（拾光）就绪 / 记录变化：微信组件里的“已收录”标记随之更新。
-    for (const name of ["wechat2ob:ready", "wechat2ob:synced", "momento:ready", "momento:changed"]) {
+    // wechat2ob:changed：收件状态在同步之外变化（例如在拾光里收下后标为已整理），待整理数随之更新。
+    for (const name of ["wechat2ob:ready", "wechat2ob:synced", "wechat2ob:changed", "momento:ready", "momento:changed"]) {
       this.registerEvent(workspace.on(name, () => {
         this.refreshViews({ kind: "wechat" });
         this.refreshViews({ kind: "insights" });
