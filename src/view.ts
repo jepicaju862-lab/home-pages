@@ -116,6 +116,8 @@ export class HomeView extends ItemView {
   private editing = false;
   private hosts = new Map<string, WidgetHost>();
   private rootEl!: HTMLElement;
+  /** 页面切换器的外壳：标题栏可见时挂进标题栏，否则挂在页面顶部。也是拖动预览的定位容器。 */
+  private tabsHostEl!: HTMLElement;
   private tabsEl!: HTMLElement;
   private toolbarEl!: HTMLElement;
   private gridEl!: HTMLElement;
@@ -154,7 +156,8 @@ export class HomeView extends ItemView {
   async onOpen(): Promise<void> {
     this.contentEl.addClass("hp-view");
     this.rootEl = this.contentEl.createDiv({ cls: "hp-root" });
-    this.tabsEl = this.rootEl.createDiv({ cls: "hp-tabs" });
+    this.tabsHostEl = createDiv({ cls: "hp-tabs-host" });
+    this.tabsEl = this.tabsHostEl.createDiv({ cls: "hp-tabs" });
     this.toolbarEl = this.rootEl.createDiv({ cls: "hp-toolbar" });
     this.gridEl = this.rootEl.createDiv({ cls: "hp-grid" });
 
@@ -171,6 +174,8 @@ export class HomeView extends ItemView {
     this.registerEvent(this.app.vault.on("delete", schedule));
     this.registerEvent(this.app.vault.on("rename", schedule));
     this.registerEvent(this.app.metadataCache.on("resolved", () => this.scheduleRefresh()));
+    // 「显示标签页标题栏」开关切换时，页面切换器在标题栏与页面顶部之间迁移。
+    this.registerEvent(this.app.workspace.on("css-change", () => this.mountTabs()));
 
     this.bindSorting();
     // 第三方插件（多维表格等）晚于首页加载时，注册后立刻把占位卡片换成真实内容。
@@ -183,6 +188,8 @@ export class HomeView extends ItemView {
     this.stopResize?.();
     this.cardSorter?.destroy();
     this.tabSorter?.destroy();
+    this.tabsHostEl.remove();
+    this.headerTitleEl()?.removeClass("hp-has-switcher");
     if (this.refreshTimer !== null) window.clearTimeout(this.refreshTimer);
     for (const host of this.hosts.values()) host.dispose();
     this.hosts.clear();
@@ -216,14 +223,25 @@ export class HomeView extends ItemView {
     this.tabSorter?.cancel();
     const { pages, alwaysShowPageTabs } = this.plugin.settings;
     this.tabsEl.empty();
+    this.tabsEl.toggleClass("is-editing", this.editing);
     const show = alwaysShowPageTabs || pages.length > 1 || this.editing;
-    this.tabsEl.toggleClass("is-hidden", !show);
+    this.tabsHostEl.toggleClass("is-hidden", !show);
+    this.mountTabs();
     if (!show) return;
+    this.tabsEl.setAttribute("role", "tablist");
+    this.tabsEl.setAttribute("aria-label", "首页页面");
     for (const page of pages) {
+      const active = page.id === this.page.id;
       const tab = this.tabsEl.createEl("button", {
-        cls: `hp-tab${page.id === this.page.id ? " is-active" : ""}`,
+        cls: `hp-tab${active ? " is-active" : ""}`,
         text: page.name,
-        attr: { type: "button", "data-id": page.id, title: this.editing ? "拖动标签调整页面顺序" : page.name }
+        attr: {
+          type: "button",
+          role: "tab",
+          "aria-selected": String(active),
+          "data-id": page.id,
+          title: this.editing ? "拖动标签调整页面顺序" : page.name
+        }
       });
       tab.addEventListener("click", () => void this.switchPage(page.id));
       tab.addEventListener("contextmenu", (event) => {
@@ -240,6 +258,28 @@ export class HomeView extends ItemView {
         await this.switchPage(page.id);
       }).open();
     });
+  }
+
+  private headerTitleEl(): HTMLElement | null {
+    return this.containerEl.querySelector<HTMLElement>(":scope > .view-header .view-header-title-container");
+  }
+
+  /**
+   * 页面切换器优先取代标题栏里与页面名重复的标题，不占内容区高度；
+   * 用户关掉「显示标签页标题栏」时退回到页面顶部的一行文字标签。
+   */
+  private mountTabs(): void {
+    const header = this.headerTitleEl();
+    const body = this.containerEl.ownerDocument.body;
+    const headerVisible = !!header && (body.hasClass("show-view-header") || body.hasClass("is-phone"));
+    const visible = !this.tabsHostEl.hasClass("is-hidden");
+    if (headerVisible) {
+      if (this.tabsHostEl.parentElement !== header) header.appendChild(this.tabsHostEl);
+    } else if (this.tabsHostEl.parentElement !== this.rootEl) {
+      this.rootEl.insertBefore(this.tabsHostEl, this.rootEl.firstChild);
+    }
+    this.tabsHostEl.toggleClass("is-in-header", headerVisible);
+    header?.toggleClass("hp-has-switcher", headerVisible && visible);
   }
 
   private renderToolbar(): void {
@@ -721,11 +761,11 @@ export class HomeView extends ItemView {
       onReorder: (id, beforeId) => void this.reorderWidget(id, beforeId),
       scrollContainer: this.contentEl
     });
+    // 页面切换器多数时候挂在视图标题栏里（contentEl 之外），不能拿 contentEl 当可放置范围。
     this.tabSorter = new PointerSorter(this.tabsEl, {
       itemSelector: ".hp-tab[data-id]",
       canStart: () => this.editing,
-      onReorder: (id, beforeId) => void this.reorderPage(id, beforeId),
-      scrollContainer: this.contentEl
+      onReorder: (id, beforeId) => void this.reorderPage(id, beforeId)
     });
   }
 }
