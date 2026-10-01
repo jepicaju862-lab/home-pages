@@ -2234,7 +2234,9 @@
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  .hp-card {
+  /* 需压过下方平板规则 .hp-card[data-w="7…12"] { span 12 }：否则 6 列网格里出现隐式空列，所有卡片被挤成半宽。 */
+  .hp-card,
+  .hp-grid > .hp-card[data-w] {
     grid-column: 1 / -1;
   }
 
@@ -4275,7 +4277,8 @@
   .hp-grid {
     gap: 12px;
   }
-  .hp-card {
+  .hp-card,
+  .hp-grid > .hp-card[data-w] {
     grid-column: 1 / -1;
   }
   .hp-card-hero {
