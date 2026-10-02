@@ -9,6 +9,7 @@ import { createWidgetInstance, getWidgetDefinition, listWidgetDefinitions, onReg
 import { sanitizeSettings, sanitizeWidget } from "../src/settings";
 import { CustomWidgetManager, DEMO_WIDGET_TEMPLATE, evaluateWidgetScript } from "../src/widgets/userLoader";
 import { habitStreak } from "../src/widgets/habit";
+import { fileIcon, matchesExtension, normalizeExtensions, recentWidget, togglePreset } from "../src/widgets/recent";
 import { advanceSession, bumpHistory, formatClock, pauseSession, pomodoroWidget, remainingMs, resetSession, startSession, type PomodoroConfig } from "../src/widgets/pomodoro";
 
 import { cmaIcon, normalizeHost, parseCoords, qweatherIcon, rankCmaCandidates, splitQuery, stripSuffix } from "../src/utils/weather";
@@ -555,6 +556,24 @@ async function testUserCustomWidgets(): Promise<void> {
   check("saved tab setting kept; seen list deduped and filtered", kept.alwaysShowPageTabs === false && kept.seenCustomWidgetKinds.join(",") === "a,b");
 }
 
+function testRecentFormats(): void {
+  check("recent: default shows only notes", JSON.stringify(recentWidget.normalizeConfig?.({}).extensions) === '["md"]');
+  check("recent: old configs without extensions stay md", JSON.stringify(recentWidget.normalizeConfig?.({ limit: 5 }).extensions) === '["md"]');
+  const parsed = normalizeExtensions(".PDF, *.duowei，canvas  md\nmd");
+  check("recent: extensions parsed and deduped", JSON.stringify(parsed) === '["pdf","duowei","canvas","md"]', parsed);
+  check("recent: * means all files", JSON.stringify(normalizeExtensions("pdf, *")) === '["*"]');
+  check("recent: junk input falls back to md", JSON.stringify(normalizeExtensions(" ,../, ")) === '["md"]');
+  check("recent: matching ignores case", matchesExtension("PDF", ["pdf"]) && !matchesExtension("png", ["pdf"]) && matchesExtension("docx", ["*"]));
+  check("recent: icons by type", fileIcon("duowei") === "table-2" && fileIcon("JPG") === "image" && fileIcon("docx") === "file");
+  check("recent: preset toggles on", JSON.stringify(togglePreset(["md"], ["pdf"])) === '["md","pdf"]');
+  check("recent: preset toggles off", JSON.stringify(togglePreset(["md", "pdf"], ["pdf"])) === '["md"]');
+  check("recent: preset replaces *", JSON.stringify(togglePreset(["*"], ["pdf"])) === '["pdf"]');
+  check("recent: last preset off falls back to md", JSON.stringify(togglePreset(["pdf"], ["pdf"])) === '["md"]');
+  const config = recentWidget.normalizeConfig?.({ extensions: ["pdf", "duowei"] });
+  const file = (extension: string) => ({ extension }) as TFile;
+  check("recent: watches configured formats", !!config && recentWidget.watchesFile?.(file("pdf"), config) === true && recentWidget.watchesFile?.(file("png"), config) === false);
+}
+
 function testHabitStreak(): void {
   const done = new Set(["2026-09-28", "2026-09-29", "2026-09-30", "2026-09-26"]);
   const isDone = (iso: string): boolean => done.has(iso);
@@ -843,6 +862,7 @@ testWeatherHelpers();
 testMedia();
 await testOpmlAndFollow();
 await testMediaCachingAndProgress();
+testRecentFormats();
 await testWechat2obApi();
 await testDuowei();
 await testDigest();

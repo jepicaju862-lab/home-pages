@@ -25,7 +25,7 @@ Home Pages comes with 12+ built-in productivity widgets that can be freely combi
 | Widget | Description | Key Configurations |
 | :--- | :--- | :--- |
 | **Welcome Banner** | Greeting by time of day, custom nickname, live clock (optional seconds), weather forecast, vault stats, countdown badge, and customizable background image. | Weather provider (CMA Station / Open-Meteo / QWeather), city/district selection, background mask, field toggles, vault founding date, target date. |
-| **Recent Notes** | Fast access to recently modified or newly created notes with folder paths. | Note count limit, include/exclude folders, sort order, display folder option. |
+| **Recent Notes** | Fast access to recently modified or newly created files with folder paths: notes by default, or any formats you choose (PDF, `.duowei`, canvas, images…). | Note count limit, file formats (comma-separated extensions or one-click presets, `*` for all), include/exclude folders, sort order, display folder option. |
 | **Quick Access** | Pinned notes, folders, or attachments displayed as interactive icon tiles. | Note path autocomplete, display name, Lucide icon picker, custom order, column count. |
 | **Countdown & Anniversaries** | Accurate day count tracking remaining days to goals or elapsed days from anniversaries. | Target date, counting direction (past / future), description and subtitle. |
 | **Pomodoro Clock** | Focus, short break, and long break cycle timer with progress ring, task note, and daily/weekly completion statistics. Timers persist across note switches and restarts. | Stage durations, long break frequency, auto-start breaks, sound alerts, system notifications. |

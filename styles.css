@@ -711,6 +711,63 @@
   white-space: nowrap;
 }
 
+.hp-recent-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hp-recent-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-recent-ext {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--background-modifier-hover);
+  color: var(--hp-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+}
+
+.hp-recent-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hp-recent-presets .hp-recent-preset {
+  height: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.hp-recent-presets .hp-recent-preset:hover {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+}
+
+.hp-recent-presets .hp-recent-preset.is-on {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+  color: var(--text-accent);
+  font-weight: 600;
+}
+
 .hp-list-sub {
   overflow: hidden;
   color: var(--hp-muted);
