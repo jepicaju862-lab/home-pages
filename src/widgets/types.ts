@@ -1,4 +1,4 @@
-import type { App, Component } from "obsidian";
+import type { App, Component, TFile } from "obsidian";
 import type HomePagesPlugin from "../main";
 import type { WidgetInstance, WidgetKind } from "../types";
 
@@ -29,6 +29,8 @@ export interface WidgetContext<C> {
   isAlive(): boolean;
   /** 是否处于布局编辑模式。 */
   isEditing(): boolean;
+  /** 暂时隐藏整张卡片（没有内容可显示时）；编辑布局时仍会显示，便于调整。每次重绘前自动恢复显示。 */
+  setHidden(hidden: boolean): void;
 }
 
 /** 组件配置面板的上下文：操作的是草稿，点“保存”后才写回。 */
@@ -58,6 +60,11 @@ export interface WidgetDefinition<C = Record<string, unknown>> {
   renderSettings(container: HTMLElement, ctx: WidgetSettingsContext<C>): void;
   /** 库文件变化时是否需要重绘（默认 true）。 */
   liveRefresh?: boolean;
+  /**
+   * 首页默认只在 md / canvas / base / duowei / json 文件变化时重绘。其他格式（pdf、图片……）变化时，
+   * 只重绘这里返回 true 的组件。
+   */
+  watchesFile?(file: TFile, config: C): boolean;
 }
 
 export function normalizeWith<C extends Record<string, unknown>>(defaults: C, raw: Record<string, unknown>): C {

@@ -12,6 +12,8 @@ import { animateLayout, moveBefore, PointerSorter } from "./ui/sortable";
 
 export const VIEW_TYPE_HOME = "home-pages-view";
 const REFRESH_DEBOUNCE_MS = 900;
+/** 这些格式变化时重绘所有组件；其他格式只重绘声明了 watchesFile 的组件。 */
+const WATCHED_EXTENSIONS = ["md", "base", "canvas", "duowei", "json"];
 
 const clampSpan = (value: number, max: number): number => Math.min(max, Math.max(1, Math.round(value)));
 
@@ -40,6 +42,7 @@ class WidgetHost {
     this.bodyEl = body;
     this.subtitleEl.setText("");
     this.actionsEl.empty();
+    this.cardEl.removeClass("is-auto-hidden");
 
     const definition = getWidgetDefinition(this.widget.kind);
     if (!definition) {
@@ -86,7 +89,10 @@ class WidgetHost {
       },
       registerCleanup: (callback) => this.cleanups.push(callback),
       isAlive: () => token === this.token && body.isConnected,
-      isEditing: () => view.isEditing()
+      isEditing: () => view.isEditing(),
+      setHidden: (hidden) => {
+        if (token === this.token) this.cardEl.toggleClass("is-auto-hidden", hidden);
+      }
     };
     try {
       await definition.render(body, ctx);
@@ -120,6 +126,8 @@ export class HomeView extends ItemView {
   private toolbarEl!: HTMLElement;
   private gridEl!: HTMLElement;
   private refreshTimer: number | null = null;
+  /** 待刷新的范围：true 表示全部组件，否则为组件 id。 */
+  private pendingRefresh: true | Set<string> | null = null;
   private cardSorter?: PointerSorter;
   private tabSorter?: PointerSorter;
   /** 正在拖动缩放时，取消并恢复原尺寸。 */
@@ -163,13 +171,23 @@ export class HomeView extends ItemView {
     this.addAction("settings", "插件设置", () => this.plugin.openSettings());
 
     const schedule = (file?: unknown): void => {
-      if (file instanceof TFile && !["md", "base", "canvas", "duowei", "json"].includes(file.extension.toLowerCase())) return;
+      if (file instanceof TFile && !WATCHED_EXTENSIONS.includes(file.extension.toLowerCase())) {
+        // 其他格式（pdf、图片……）只重绘声明关心它的组件，例如显示 PDF 的「最近笔记」。
+        const ids = this.hostsWatching(file);
+        if (ids.length > 0) this.scheduleRefresh(ids);
+        return;
+      }
       this.scheduleRefresh();
     };
     this.registerEvent(this.app.vault.on("modify", schedule));
     this.registerEvent(this.app.vault.on("create", schedule));
     this.registerEvent(this.app.vault.on("delete", schedule));
-    this.registerEvent(this.app.vault.on("rename", schedule));
+    // 改名可能改了扩展名（a.md → a.pdf）：原来的格式也算，笔记列表才会去掉它。
+    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+      const oldExtension = oldPath.includes(".") ? oldPath.slice(oldPath.lastIndexOf(".") + 1).toLowerCase() : "";
+      if (WATCHED_EXTENSIONS.includes(oldExtension)) this.scheduleRefresh();
+      else schedule(file);
+    }));
     this.registerEvent(this.app.metadataCache.on("resolved", () => this.scheduleRefresh()));
 
     this.bindSorting();
@@ -567,18 +585,41 @@ export class HomeView extends ItemView {
 
   // ---- 刷新 ----------------------------------------------------------------
 
-  private scheduleRefresh(): void {
+  private scheduleRefresh(ids?: string[]): void {
+    if (!ids) this.pendingRefresh = true;
+    else if (this.pendingRefresh !== true) {
+      this.pendingRefresh ??= new Set();
+      for (const id of ids) this.pendingRefresh.add(id);
+    }
     if (this.refreshTimer !== null) window.clearTimeout(this.refreshTimer);
     this.refreshTimer = window.setTimeout(() => {
       this.refreshTimer = null;
       // 用户正在卡片里输入（例如新增待办）时推迟刷新，避免输入框被销毁。
       const active = document.activeElement;
       if (active && this.contentEl.contains(active) && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
-        this.scheduleRefresh();
+        this.scheduleRefresh([]);
         return;
       }
-      this.refreshWidgets();
+      const pending = this.pendingRefresh;
+      this.pendingRefresh = null;
+      if (pending === true) this.refreshWidgets();
+      else for (const id of pending ?? []) void this.hosts.get(id)?.render();
     }, REFRESH_DEBOUNCE_MS);
+  }
+
+  /** 关心该文件的组件 id（组件定义的 watchesFile 返回 true）。 */
+  private hostsWatching(file: TFile): string[] {
+    const ids: string[] = [];
+    for (const [id, host] of this.hosts) {
+      const definition = getWidgetDefinition(host.widget.kind);
+      if (!definition?.watchesFile || definition.liveRefresh === false) continue;
+      try {
+        if (definition.watchesFile(file, normalizeWidgetConfig<Record<string, unknown>>(host.widget))) ids.push(id);
+      } catch (error) {
+        console.error("Home Pages: watchesFile failed", host.widget.kind, error);
+      }
+    }
+    return ids;
   }
 
   /** 只重绘某一类组件（含标题栏图标 / 名称）。 */

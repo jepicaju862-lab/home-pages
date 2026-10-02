@@ -1,4 +1,4 @@
-import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
+import { Notice, Plugin, WorkspaceLeaf, type EventRef } from "obsidian";
 import { DEFAULT_SETTINGS, HomePagesSettingTab, createDefaultPage, sanitizeSettings } from "./settings";
 import { createWidgetInstance } from "./widgets/registry";
 import { resumePomodoroTimers } from "./widgets/pomodoro";
@@ -83,6 +83,17 @@ export default class HomePagesPlugin extends Plugin {
 
     // 通知晚于本插件加载 / 正在监听的插件：可以注册组件了。
     (this.app.workspace as unknown as { trigger(name: string, ...data: unknown[]): void }).trigger("home-pages:ready", this.api);
+
+    // WeChat2Ob 的 api 就绪 / 同步写完：重绘读微信消息的组件（不再依赖定时轮询它的私有日志）。
+    const workspace = this.app.workspace as unknown as { on(name: string, callback: () => void): EventRef };
+    // Momento（拾光）就绪 / 记录变化：微信组件里的“已收录”标记随之更新。
+    // wechat2ob:changed：收件状态在同步之外变化（例如在拾光里收下后标为已整理），待整理数随之更新。
+    for (const name of ["wechat2ob:ready", "wechat2ob:synced", "wechat2ob:changed", "momento:ready", "momento:changed"]) {
+      this.registerEvent(workspace.on(name, () => {
+        this.refreshViews({ kind: "wechat" });
+        this.refreshViews({ kind: "insights" });
+      }));
+    }
 
     this.customWidgetManager.registerWatcher();
     this.app.workspace.onLayoutReady(async () => {

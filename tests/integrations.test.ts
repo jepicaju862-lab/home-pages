@@ -3,12 +3,13 @@ import path from "node:path";
 import { formatValue, selectRecords, type DuoweiDoc } from "../src/widgets/duoweiCore";
 import { loadAnnotations } from "../src/widgets/annotations";
 import { buildDigest } from "../src/widgets/duoweiDigest";
-import { loadWechat } from "../src/widgets/wechat";
+import { loadWechat, momentoApi, syncWechat2obViaApi, wechat2obApi, type Wechat2obInboxV1 } from "../src/widgets/wechat";
 import { TFile, TFolder } from "obsidian";
 import { createWidgetInstance, getWidgetDefinition, listWidgetDefinitions, onRegistryChange, registerWidget } from "../src/widgets/registry";
 import { sanitizeSettings, sanitizeWidget } from "../src/settings";
 import { CustomWidgetManager, DEMO_WIDGET_TEMPLATE, evaluateWidgetScript } from "../src/widgets/userLoader";
 import { habitStreak } from "../src/widgets/habit";
+import { fileIcon, matchesExtension, normalizeExtensions, recentWidget, togglePreset } from "../src/widgets/recent";
 import { advanceSession, bumpHistory, formatClock, pauseSession, pomodoroWidget, remainingMs, resetSession, startSession, type PomodoroConfig } from "../src/widgets/pomodoro";
 
 import { cmaIcon, normalizeHost, parseCoords, qweatherIcon, rankCmaCandidates, splitQuery, stripSuffix } from "../src/utils/weather";
@@ -237,6 +238,85 @@ async function testWechat(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const missing = await loadWechat(app as any, { ...config, pluginId: "nope-plugin" });
   check("missing plugin → not ready", !missing.ready);
+}
+
+/** WeChat2Ob 公开 api 优先：不依赖测试库，用空目录 + 内存里的插件 api。 */
+async function testWechat2obApi(): Promise<void> {
+  const root = path.resolve("tests/.out/wechat-api-fixture");
+  await fs.mkdir(root, { recursive: true });
+  const { app } = await fakeApp(root);
+  const config = { source: "wechat2ob" as const, duoweiPluginId: "duowei-table-pro", duoweiTablePath: "", pluginId: "wechat2ob", stateFolder: "", showStats: true, showThumbs: true, days: 14, limit: 2, kinds: [], pendingOnly: false };
+  const now = Date.now();
+  const inbox: Wechat2obInboxV1 = {
+    messages: [
+      { key: "k-old", kind: "text", title: "", content: "  早上\n好  ", transcript: "", receivedAt: new Date(now - 3600000).toISOString(), notePath: "日记/今天.md", attachments: [] },
+      { key: "k-voice", kind: "voice", title: "", content: "", transcript: "下午三点开会", receivedAt: new Date(now - 60000).toISOString(), attachments: [{ path: "WeChat2Ob/附件/a.m4a", kind: "voice", mimeType: "audio/mp4" }] },
+      { key: "k-image", kind: "image", title: "", content: "", transcript: "", receivedAt: new Date(now - 120000).toISOString(), attachments: [{ path: "WeChat2Ob/附件/b.png", kind: "image", mimeType: "image/png" }] },
+      { key: "k-bad", kind: "text", title: "", content: "坏时间", transcript: "", receivedAt: "not-a-date", attachments: [] }
+    ],
+    today: 5, week: 9, attachments: 2, pending: 1, todayNotePath: "日记/今天.md", tablePath: "WeChat2Ob/微信收件箱.duowei", inboxRoot: "WeChat2Ob"
+  };
+  const queries: unknown[] = [];
+  let syncs = 0;
+  let mode: "ok" | "malformed" | "throw" = "ok";
+  const api = {
+    version: 1 as const,
+    query: async (options: unknown) => {
+      queries.push(options);
+      if (mode === "throw") throw new Error("boom");
+      return mode === "malformed" ? ({ messages: [] } as unknown as Wechat2obInboxV1) : inbox;
+    },
+    sync: async () => {
+      syncs += 1;
+    },
+    openInbox: () => undefined
+  };
+  const withApi = { ...(app as object), plugins: { plugins: { wechat2ob: { api } } } };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const viaApi = await loadWechat(withApi as any, config);
+  check("wechat2ob api preferred", viaApi.ready && viaApi.via === "api", [viaApi.ready, viaApi.via]);
+  check("api query receives widget filters", JSON.stringify(queries[0]) === JSON.stringify({ days: 14, limit: 2, kinds: [] }), queries[0]);
+  check("api stats passed through", viaApi.today === 5 && viaApi.week === 9 && viaApi.attachments === 2 && viaApi.pending === 1, viaApi);
+  check("api items sorted, invalid dropped, limit applied", viaApi.items.map((item) => item.key).join() === "k-voice,k-image", viaApi.items.map((item) => item.key));
+  check("api voice summarized from transcript", viaApi.items[0]?.text === "下午三点开会", viaApi.items[0]);
+  check("api image thumbnail detected", viaApi.items[1]?.image === "WeChat2Ob/附件/b.png", viaApi.items[1]);
+  check("api paths passed through", viaApi.todayNotePath === "日记/今天.md" && viaApi.tablePath === "WeChat2Ob/微信收件箱.duowei");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const all = await loadWechat(withApi as any, { ...config, limit: 10 });
+  check("api text whitespace normalized", all.items.find((item) => item.key === "k-old")?.text === "早上 好", all.items.map((item) => item.text));
+
+  mode = "malformed";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const malformed = await loadWechat(withApi as any, config);
+  check("malformed api result falls back to journals", malformed.via === "journal" && !malformed.ready, [malformed.via, malformed.ready]);
+  mode = "throw";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const thrown = await loadWechat(withApi as any, config);
+  check("throwing api falls back to journals", thrown.via === "journal", thrown.via);
+
+  const future = { ...(app as object), plugins: { plugins: { wechat2ob: { api: { ...api, version: 2 } } } } };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("unknown api version ignored", wechat2obApi(future as any, "wechat2ob") === null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const noApi = await loadWechat(app as any, config);
+  check("no api → journal fallback", noApi.via === "journal" && !noApi.ready, [noApi.via, noApi.ready]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("sync via api handled", (await syncWechat2obViaApi(withApi as any, "wechat2ob")) && syncs === 1, syncs);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("sync without api defers to command", !(await syncWechat2obViaApi(app as any, "wechat2ob")));
+
+  // 拾光：只认 version 1 且具备所需方法的 Momento api。
+  const momento = { version: 1, findBySource: () => ({}), open: async () => undefined, wechat: { available: () => true, keep: async () => "e1" } };
+  const withMomento = (api: unknown) => ({ ...(app as object), plugins: { plugins: { momento: { api } } } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("momento api detected", momentoApi(withMomento(momento) as any) !== null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("momento api with unknown version ignored", momentoApi(withMomento({ ...momento, version: 2 }) as any) === null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("momento api without wechat.keep ignored", momentoApi(withMomento({ ...momento, wechat: {} }) as any) === null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check("no momento → no keep buttons", momentoApi(app as any) === null);
 }
 
 async function testAnnotations(): Promise<void> {
@@ -474,6 +554,24 @@ async function testUserCustomWidgets(): Promise<void> {
   check("new settings default: auto-add on, seen list empty, tabs shown", legacy.autoAddCustomWidgets === true && legacy.seenCustomWidgetKinds.length === 0 && legacy.alwaysShowPageTabs === true);
   const kept = sanitizeSettings({ alwaysShowPageTabs: false, seenCustomWidgetKinds: ["a", "a", 3, "b"] });
   check("saved tab setting kept; seen list deduped and filtered", kept.alwaysShowPageTabs === false && kept.seenCustomWidgetKinds.join(",") === "a,b");
+}
+
+function testRecentFormats(): void {
+  check("recent: default shows only notes", JSON.stringify(recentWidget.normalizeConfig?.({}).extensions) === '["md"]');
+  check("recent: old configs without extensions stay md", JSON.stringify(recentWidget.normalizeConfig?.({ limit: 5 }).extensions) === '["md"]');
+  const parsed = normalizeExtensions(".PDF, *.duowei，canvas  md\nmd");
+  check("recent: extensions parsed and deduped", JSON.stringify(parsed) === '["pdf","duowei","canvas","md"]', parsed);
+  check("recent: * means all files", JSON.stringify(normalizeExtensions("pdf, *")) === '["*"]');
+  check("recent: junk input falls back to md", JSON.stringify(normalizeExtensions(" ,../, ")) === '["md"]');
+  check("recent: matching ignores case", matchesExtension("PDF", ["pdf"]) && !matchesExtension("png", ["pdf"]) && matchesExtension("docx", ["*"]));
+  check("recent: icons by type", fileIcon("duowei") === "table-2" && fileIcon("JPG") === "image" && fileIcon("docx") === "file");
+  check("recent: preset toggles on", JSON.stringify(togglePreset(["md"], ["pdf"])) === '["md","pdf"]');
+  check("recent: preset toggles off", JSON.stringify(togglePreset(["md", "pdf"], ["pdf"])) === '["md"]');
+  check("recent: preset replaces *", JSON.stringify(togglePreset(["*"], ["pdf"])) === '["pdf"]');
+  check("recent: last preset off falls back to md", JSON.stringify(togglePreset(["pdf"], ["pdf"])) === '["md"]');
+  const config = recentWidget.normalizeConfig?.({ extensions: ["pdf", "duowei"] });
+  const file = (extension: string) => ({ extension }) as TFile;
+  check("recent: watches configured formats", !!config && recentWidget.watchesFile?.(file("pdf"), config) === true && recentWidget.watchesFile?.(file("png"), config) === false);
 }
 
 function testHabitStreak(): void {
@@ -764,6 +862,8 @@ testWeatherHelpers();
 testMedia();
 await testOpmlAndFollow();
 await testMediaCachingAndProgress();
+testRecentFormats();
+await testWechat2obApi();
 await testDuowei();
 await testDigest();
 await testWechat();

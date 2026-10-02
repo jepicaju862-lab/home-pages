@@ -9,7 +9,7 @@ import { loadDoc, type DuoweiDoc, type DuoweiField } from "./duoweiCore";
 /**
  * 微信收件：两种来源
  *   - duowei：多维表格插件内置的「个人微信收件箱」（一条消息一行的 .duowei 表，设置在其 data.json 的 weixinInbox）。
- *   - wechat2ob：WeChat2Ob 插件的私有同步日志（state/）。
+ *   - wechat2ob：优先走 WeChat2Ob 的公开 api（见 Wechat2obApiV1）；插件未提供 api 时回退读它的私有同步日志（state/）。
  * auto 模式优先前者（其表存在时），否则后者。
  */
 
@@ -79,6 +79,8 @@ export interface WechatItem {
 export interface WechatData {
   ready: boolean;
   source: "duowei" | "wechat2ob";
+  /** WeChat2Ob 来源的取数方式：公开 api，或回退读私有同步日志。 */
+  via?: "api" | "journal";
   items: WechatItem[];
   today: number;
   week: number;
@@ -243,7 +245,158 @@ function duoweiApi(app: App, pluginId: string): DuoweiApiLike | null {
   return api && typeof api.openView === "function" && typeof api.commit === "function" ? (api as DuoweiApiLike) : null;
 }
 
-// ---- WeChat2Ob 同步日志 ------------------------------------------------------
+// ---- WeChat2Ob 公开 api（优先） ---------------------------------------------
+
+/**
+ * 首页期望 WeChat2Ob 暴露的接口：app.plugins.plugins["wechat2ob"].api。
+ * WeChat2Ob 就绪时触发 workspace 事件 "wechat2ob:ready"（参数为 api），每次同步写完后触发 "wechat2ob:synced"。
+ * 有了它首页就不再读 WeChat2Ob 的私有 state/ 与 data.json；没有时回退到下面的同步日志读取。
+ */
+export interface Wechat2obMessageV1 {
+  /** 稳定的消息键（同步日志的 key）。 */
+  key: string;
+  /** text / image / voice / video / file / mixed。 */
+  kind: string;
+  title: string;
+  content: string;
+  transcript: string;
+  /** ISO 时间。 */
+  receivedAt: string;
+  /** 消息所在笔记 / 表格（已写入时）。 */
+  notePath?: string;
+  tablePath?: string;
+  attachments: Array<{ path: string; kind: string; mimeType: string }>;
+}
+
+export interface Wechat2obInboxV1 {
+  /** 已按 query 的 days / kinds 过滤、按 limit 截断，新的在前。 */
+  messages: Wechat2obMessageV1[];
+  /** 以下统计不受 days / kinds / limit 影响。 */
+  today: number;
+  week: number;
+  attachments: number;
+  /** “待整理”条数；未开启表格输出时为 null。 */
+  pending: number | null;
+  todayNotePath: string;
+  tablePath: string;
+  inboxRoot: string;
+}
+
+export interface Wechat2obApiV1 {
+  version: 1;
+  query(options: { days: number; limit: number; kinds: string[] }): Promise<Wechat2obInboxV1>;
+  /** 立即同步；结果与错误由 WeChat2Ob 自己提示（通知 / 状态栏）。 */
+  sync(): Promise<void>;
+  openInbox(): Promise<void> | void;
+}
+
+export function wechat2obApi(app: App, pluginId: string): Wechat2obApiV1 | null {
+  const plugins = (app as App & { plugins?: { plugins?: Record<string, { api?: unknown }> } }).plugins?.plugins;
+  const api = plugins?.[pluginId]?.api as Partial<Wechat2obApiV1> | undefined;
+  return api && api.version === 1 && typeof api.query === "function" && typeof api.sync === "function" && typeof api.openInbox === "function"
+    ? (api as Wechat2obApiV1)
+    : null;
+}
+
+const asText = (value: unknown): string => (typeof value === "string" ? value : "");
+const asCount = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null);
+
+/** 跨插件数据不可全信：字段缺失按空处理，统计缺失视为接口不兼容（返回 null 以回退读日志）。 */
+function fromApi(inbox: Wechat2obInboxV1, limit: number): WechatData | null {
+  if (!inbox || typeof inbox !== "object" || !Array.isArray(inbox.messages)) return null;
+  const today = asCount(inbox.today);
+  const week = asCount(inbox.week);
+  const attachments = asCount(inbox.attachments);
+  if (today === null || week === null || attachments === null) return null;
+  const items: WechatItem[] = [];
+  for (const raw of inbox.messages) {
+    if (!raw || typeof raw !== "object") continue;
+    const receivedAt = Date.parse(asText(raw.receivedAt));
+    if (!Number.isFinite(receivedAt)) continue;
+    const files = (Array.isArray(raw.attachments) ? raw.attachments : [])
+      .filter((attachment) => attachment && typeof attachment.path === "string" && attachment.path)
+      .map((attachment) => ({ path: attachment.path, kind: asText(attachment.kind), mimeType: asText(attachment.mimeType) }));
+    items.push({
+      key: asText(raw.key) || String(receivedAt),
+      kind: asText(raw.kind) || "unknown",
+      text: summarize({ title: asText(raw.title), content: asText(raw.content), transcript: asText(raw.transcript) }, files),
+      receivedAt,
+      notePath: asText(raw.notePath) || undefined,
+      tablePath: asText(raw.tablePath) || undefined,
+      attachments: files,
+      image: files.find((attachment) => attachment.mimeType.startsWith("image/"))?.path
+    });
+  }
+  items.sort((a, b) => b.receivedAt - a.receivedAt);
+  return {
+    ready: true,
+    source: "wechat2ob",
+    via: "api",
+    items: items.slice(0, limit),
+    today,
+    week,
+    attachments,
+    pending: asCount(inbox.pending),
+    todayNotePath: asText(inbox.todayNotePath),
+    tablePath: asText(inbox.tablePath),
+    inboxRoot: asText(inbox.inboxRoot)
+  };
+}
+
+async function loadWechat2obApi(api: Wechat2obApiV1, config: WechatConfig): Promise<WechatData | null> {
+  try {
+    const data = fromApi(await api.query({ days: config.days, limit: config.limit, kinds: [...config.kinds] }), config.limit);
+    if (!data) console.warn("Home Pages: WeChat2Ob api returned an unexpected shape; falling back to sync journals");
+    return data;
+  } catch (error) {
+    console.error("Home Pages: WeChat2Ob api query failed; falling back to sync journals", error);
+    return null;
+  }
+}
+
+/** 通过 api 同步；返回 false 表示插件没有 api，调用方应退回执行命令。 */
+export async function syncWechat2obViaApi(app: App, pluginId: string): Promise<boolean> {
+  const api = wechat2obApi(app, pluginId);
+  if (!api) return false;
+  try {
+    await api.sync();
+  } catch (error) {
+    new Notice(error instanceof Error ? error.message : "微信同步失败", 6000);
+  }
+  return true;
+}
+
+/** 通过 api 打开收件箱；返回 false 表示插件没有 api。 */
+export async function openWechat2obInboxViaApi(app: App, pluginId: string): Promise<boolean> {
+  const api = wechat2obApi(app, pluginId);
+  if (!api) return false;
+  try {
+    await api.openInbox();
+  } catch (error) {
+    new Notice(error instanceof Error ? error.message : "打开收件箱失败", 4000);
+  }
+  return true;
+}
+
+// ---- Momento（拾光）：一键存为拾光 / 已收录 ---------------------------------
+
+/** Momento 公开 api（version 1）中本组件用到的部分。 */
+interface MomentoApiLike {
+  version: 1;
+  findBySource(plugin: string, keys: string[]): Record<string, string>;
+  open(id: string): Promise<void>;
+  wechat: { available(): boolean; keep(key: string, options?: { notify?: boolean }): Promise<string | null> };
+}
+
+export function momentoApi(app: App): MomentoApiLike | null {
+  const plugins = (app as App & { plugins?: { plugins?: Record<string, { api?: unknown }> } }).plugins?.plugins;
+  const api = plugins?.momento?.api as Partial<MomentoApiLike> | undefined;
+  return api && api.version === 1 && typeof api.findBySource === "function" && typeof api.open === "function" && typeof api.wechat?.keep === "function"
+    ? (api as MomentoApiLike)
+    : null;
+}
+
+// ---- WeChat2Ob 同步日志（回退） ---------------------------------------------
 
 interface Journal {
   format?: number;
@@ -309,11 +462,10 @@ async function readJournals(app: App, stateFolder: string): Promise<Journal[]> {
   return journals;
 }
 
-function summarize(journal: Journal): string {
-  const message = journal.message ?? {};
+function summarize(message: { title?: string; content?: string; transcript?: string }, attachments: Array<{ kind?: string }>): string {
   const text = (message.content ?? "").trim() || (message.transcript ?? "").trim() || (message.title ?? "").trim();
   if (text) return text.replace(/\s+/g, " ").slice(0, 200);
-  const kinds = (journal.attachments ?? []).map((attachment) => KIND_META[attachment.kind ?? ""]?.label ?? attachment.kind ?? "附件");
+  const kinds = attachments.map((attachment) => KIND_META[attachment.kind ?? ""]?.label ?? attachment.kind ?? "附件");
   return kinds.length > 0 ? `[${kinds.join(" / ")}]` : "（空消息）";
 }
 
@@ -337,6 +489,12 @@ async function countWechat2obPending(app: App, settings: Wechat2obSettings): Pro
 }
 
 export async function loadWechat2ob(app: App, config: WechatConfig): Promise<WechatData> {
+  const api = wechat2obApi(app, config.pluginId);
+  const viaApi = api ? await loadWechat2obApi(api, config) : null;
+  return viaApi ?? loadWechat2obJournals(app, config);
+}
+
+async function loadWechat2obJournals(app: App, config: WechatConfig): Promise<WechatData> {
   const raw = await readPluginData(app, config.pluginId);
   const settings = wechat2obSettings(raw);
   const stateFolder = normalizePath(config.stateFolder.trim() || `${app.vault.configDir}/plugins/${config.pluginId}/state`);
@@ -345,7 +503,7 @@ export async function loadWechat2ob(app: App, config: WechatConfig): Promise<Wec
   const todayNotePath = settings.noteMode === "file"
     ? settings.fixedNotePath
     : `${settings.dailyFolder ? `${settings.dailyFolder}/` : ""}${today}.md`;
-  const empty: WechatData = { ready: false, source: "wechat2ob", items: [], today: 0, week: 0, attachments: 0, pending: null, todayNotePath, tablePath: "", inboxRoot: settings.root };
+  const empty: WechatData = { ready: false, source: "wechat2ob", via: "journal", items: [], today: 0, week: 0, attachments: 0, pending: null, todayNotePath, tablePath: "", inboxRoot: settings.root };
   if (!raw && journals.length === 0) return empty;
 
   const since = config.days > 0 ? Date.now() - config.days * 86400000 : 0;
@@ -372,13 +530,14 @@ export async function loadWechat2ob(app: App, config: WechatConfig): Promise<Wec
       .filter((attachment) => typeof attachment.path === "string")
       .map((attachment) => ({ path: attachment.path as string, kind: attachment.kind ?? "", mimeType: attachment.mimeType ?? "" }));
     const image = attachments.find((attachment) => attachment.mimeType.startsWith("image/"))?.path;
-    items.push({ key: journal.key ?? String(receivedAt), kind, text: summarize(journal), receivedAt, notePath, tablePath, attachments, image });
+    items.push({ key: journal.key ?? String(receivedAt), kind, text: summarize(journal.message ?? {}, journal.attachments ?? []), receivedAt, notePath, tablePath, attachments, image });
   }
   items.sort((a, b) => b.receivedAt - a.receivedAt);
   const { pending, tablePath } = await countWechat2obPending(app, settings);
   return {
     ready: true,
     source: "wechat2ob",
+    via: "journal",
     items: items.slice(0, config.limit),
     today: todayCount,
     week: weekCount,
@@ -404,9 +563,22 @@ function runDuoweiCommand(ctx: WidgetContext<WechatConfig>, suffix: string, name
   if (!id || !runCommand(ctx.app, id)) new Notice("未找到多维表格的微信收件箱命令，请确认插件已启用");
 }
 
+/** WeChat2Ob：有 api 走 api（同步完即重绘），否则执行它的命令。 */
+async function syncWechat2ob(ctx: WidgetContext<WechatConfig>): Promise<void> {
+  if (!(await syncWechat2obViaApi(ctx.app, ctx.config.pluginId))) {
+    runWechat2obCommand(ctx, "sync", ["同步微信", "sync"]);
+    return;
+  }
+  if (ctx.isAlive()) ctx.rerender();
+}
+
+async function openWechat2obInbox(ctx: WidgetContext<WechatConfig>): Promise<void> {
+  if (!(await openWechat2obInboxViaApi(ctx.app, ctx.config.pluginId))) runWechat2obCommand(ctx, "open-inbox", ["打开收件箱", "inbox"]);
+}
+
 function sync(ctx: WidgetContext<WechatConfig>, data: WechatData): void {
   if (data.source === "duowei") runDuoweiCommand(ctx, "sync-weixin-inbox", ["同步个人微信收件箱", "微信收件箱"]);
-  else runWechat2obCommand(ctx, "sync", ["同步微信", "sync"]);
+  else void syncWechat2ob(ctx);
 }
 
 async function openItem(ctx: WidgetContext<WechatConfig>, data: WechatData, item: WechatItem, event: MouseEvent): Promise<void> {
@@ -427,7 +599,7 @@ async function openItem(ctx: WidgetContext<WechatConfig>, data: WechatData, item
     await ctx.openPath(item.attachments[0].path, { event });
     return;
   }
-  runWechat2obCommand(ctx, "open-inbox", ["打开收件箱", "inbox"]);
+  await openWechat2obInbox(ctx);
 }
 
 /** 多维表格收件箱：把一条消息标为“已整理”（走多维表格的 MutationService）。 */
@@ -467,8 +639,8 @@ export const wechatWidget: WidgetDefinition<WechatConfig> = {
     const { app, config } = ctx;
     const data = await loadWechat(app, config);
     if (!ctx.isAlive()) return;
-    // WeChat2Ob 的日志在 .obsidian 下没有库事件；定时刷新兜底（表格来源靠 .duowei 变更事件即时刷新）。
-    ctx.registerInterval(() => ctx.rerender(), 3 * 60 * 1000);
+    // 读日志时 .obsidian 下没有库事件，定时刷新兜底；api 来源靠 "wechat2ob:synced" 事件即时刷新。
+    if (data.via !== "api") ctx.registerInterval(() => ctx.rerender(), 3 * 60 * 1000);
     if (!data.ready) {
       ctx.setSubtitle("未找到数据");
       renderEmpty(body, {
@@ -477,7 +649,7 @@ export const wechatWidget: WidgetDefinition<WechatConfig> = {
           ? "未读取到 WeChat2Ob 数据：请确认已安装并同步过消息，或在设置中指定 state 目录。"
           : "未找到微信收件箱：请在多维表格里运行「创建个人微信收件箱表格」并同步，或安装 WeChat2Ob。",
         action: config.source === "wechat2ob"
-          ? { label: "立即同步", onClick: () => runWechat2obCommand(ctx, "sync", ["同步微信", "sync"]) }
+          ? { label: "立即同步", onClick: () => void syncWechat2ob(ctx) }
           : { label: "创建微信收件箱表格", onClick: () => runDuoweiCommand(ctx, "create-weixin-inbox-table", ["创建个人微信收件箱"]) }
       });
       return;
@@ -487,7 +659,7 @@ export const wechatWidget: WidgetDefinition<WechatConfig> = {
     if (data.source === "wechat2ob") {
       const noteFile = app.vault.getAbstractFileByPath(normalizePath(data.todayNotePath));
       if (noteFile instanceof TFile) ctx.addHeaderAction("calendar-days", `打开今日收件笔记（${data.todayNotePath}）`, (event) => void ctx.openPath(data.todayNotePath, { event }));
-      ctx.addHeaderAction("inbox", "打开收件箱", () => runWechat2obCommand(ctx, "open-inbox", ["打开收件箱", "inbox"]));
+      ctx.addHeaderAction("inbox", "打开收件箱", () => void openWechat2obInbox(ctx));
     }
     if (data.tablePath && app.vault.getAbstractFileByPath(normalizePath(data.tablePath)) instanceof TFile) {
       ctx.addHeaderAction("table-2", `打开收件箱表格（${data.tablePath}）`, (event) => {
@@ -524,6 +696,9 @@ export const wechatWidget: WidgetDefinition<WechatConfig> = {
       return;
     }
     const canMark = Boolean(api && api.canEdit() && data.duowei?.doneOptionId);
+    // 拾光：WeChat2Ob 的消息 key 与 Momento 记录来源一致，可标出已收录并一键收下。
+    const momento = data.source === "wechat2ob" ? momentoApi(app) : null;
+    const kept = momento ? momento.findBySource("wechat2ob", data.items.map((item) => item.key)) : {};
     for (const item of data.items) {
       const meta = KIND_META[item.kind] ?? KIND_META.unknown;
       const row = list.createDiv({ cls: `hp-wechat-item is-clickable${item.pending === false && data.source === "duowei" ? " is-done" : ""}`, attr: { title: item.notePath ?? item.status ?? "" } });
@@ -542,6 +717,26 @@ export const wechatWidget: WidgetDefinition<WechatConfig> = {
       if (item.status) line.createSpan({ cls: `hp-wechat-status${item.pending ? " is-pending" : ""}`, text: item.status });
       if (item.notePath) line.createSpan({ cls: "hp-wechat-note", text: item.notePath.replace(/\.md$/i, "").split("/").pop() ?? "" });
       line.createSpan({ cls: "hp-wechat-time", text: formatRelativeTime(item.receivedAt) });
+      if (momento && kept[item.key]) {
+        const badge = row.createEl("button", { cls: "hp-wechat-kept clickable-icon", attr: { type: "button", "aria-label": "已存为拾光，点击查看", title: "已存为拾光，点击查看" } });
+        setIcon(badge.createSpan(), "sparkles");
+        badge.createSpan({ text: "已收录" });
+        badge.addEventListener("click", (event) => {
+          event.stopPropagation();
+          void momento.open(kept[item.key]);
+        });
+      } else if (momento) {
+        const keep = row.createEl("button", { cls: "hp-wechat-keep clickable-icon", attr: { type: "button", "aria-label": "存为拾光", title: "存为拾光（同一会话连发的消息会一起收下）" } });
+        setIcon(keep, "sparkles");
+        keep.addEventListener("click", (event) => {
+          event.stopPropagation();
+          keep.disabled = true;
+          momento.wechat.keep(item.key, { notify: true }).catch((error: unknown) => {
+            keep.disabled = false;
+            new Notice(error instanceof Error ? error.message : "存为拾光失败", 4000);
+          });
+        });
+      }
       if (canMark && item.pending) {
         const done = row.createEl("button", { cls: "hp-wechat-done clickable-icon", attr: { type: "button", "aria-label": "标记为已整理", title: "标记为已整理" } });
         setIcon(done, "check");

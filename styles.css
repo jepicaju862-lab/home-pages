@@ -380,6 +380,15 @@
   filter: saturate(0.7);
 }
 
+/* 组件通过 ctx.setHidden 暂时隐藏（例如“今日拾光”没有待收内容时）；编辑布局时仍显示，便于调整位置。 */
+.hp-root:not(.is-editing) .hp-card.is-auto-hidden {
+  display: none;
+}
+
+.hp-root.is-editing .hp-card.is-auto-hidden {
+  border-style: dashed;
+}
+
 .hp-root.is-editing .hp-card-gear {
   display: none;
 }
@@ -700,6 +709,63 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hp-recent-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hp-recent-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-recent-ext {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--background-modifier-hover);
+  color: var(--hp-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+}
+
+.hp-recent-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hp-recent-presets .hp-recent-preset {
+  height: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.hp-recent-presets .hp-recent-preset:hover {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+}
+
+.hp-recent-presets .hp-recent-preset.is-on {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+  color: var(--text-accent);
+  font-weight: 600;
 }
 
 .hp-list-sub {
@@ -2225,7 +2291,9 @@
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  .hp-card {
+  /* 需压过下方平板规则 .hp-card[data-w="7…12"] { span 12 }：否则 6 列网格里出现隐式空列，所有卡片被挤成半宽。 */
+  .hp-card,
+  .hp-grid > .hp-card[data-w] {
     grid-column: 1 / -1;
   }
 
@@ -3075,6 +3143,47 @@
 
 .is-mobile .hp-wechat-done {
   opacity: 1;
+}
+
+/* 拾光：悬停出现“存为拾光”，已收录的显示小标记 */
+.hp-wechat-keep {
+  flex: none;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--hp-muted);
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.hp-wechat-item:hover .hp-wechat-keep,
+.hp-wechat-keep:focus-visible,
+.is-mobile .hp-wechat-keep {
+  opacity: 1;
+}
+
+.hp-wechat-keep:hover {
+  color: #14b8a6;
+}
+
+.hp-wechat-kept {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: var(--font-ui-smaller);
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.12);
+}
+
+.hp-wechat-kept svg {
+  width: 12px;
+  height: 12px;
 }
 /* ---- 批注与复习：面板切换 + 题库复习 ------------------------------------------ */
 
@@ -4225,7 +4334,8 @@
   .hp-grid {
     gap: 12px;
   }
-  .hp-card {
+  .hp-card,
+  .hp-grid > .hp-card[data-w] {
     grid-column: 1 / -1;
   }
   .hp-card-hero {
