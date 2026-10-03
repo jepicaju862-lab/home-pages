@@ -117,6 +117,7 @@ Users can build custom widgets directly in JavaScript without creating separate 
    ```
 4. **Save and it appears**: The first time a new script loads, its widget is added to the current page (once per widget; editing a script after you removed its card does not add it back; turn off with **Add new custom widgets automatically**).
 5. **Live Hot-Reload**: Save modifications to your `.js` file from Obsidian or an external editor like VS Code, and homepage cards will **automatically reload and re-render instantly**!
+6. **Community example**: [examples/vault-heatmap.js](examples/vault-heatmap.js) ships a ready-to-use "Vault Heatmap" widget — a GitHub-style contribution calendar that counts all vault notes by modification day (per-file daily dedup, month abbreviations on the x-axis, Mon / Wed / Fri on the y-axis). Copy the file into your custom widgets folder to use it; weeks shown, excluded folders, accent color and auto-refresh interval are configurable in the card settings.
 
 ---
 
